@@ -1,5 +1,8 @@
 {
   "nodeModulesDir": "manual",
+  "unstable": [
+    "kv"
+  ],
   "tasks": {
     "check": "deno fmt --check . && deno lint . && deno check",
     "dev": "vite",
@@ -16,11 +19,17 @@
     }
   },
   "exclude": [
-    "**/_fresh/*"
+    "**/_fresh/*",
+    "ai/",
+    ".agents/"
   ],
   "imports": {
     "@/": "./",
+    "bcryptjs": "npm:bcryptjs@^3.0.3",
     "fresh": "jsr:@fresh/core@^2.3.3",
+    "highlight.js": "npm:highlight.js@^11.12.0",
+    "lucide-preact": "npm:lucide-preact@^1.38.0",
+    "marked": "npm:marked@^18.0.11",
     "preact": "npm:preact@^10.29.1",
     "@preact/signals": "npm:@preact/signals@^2.9.0",
     "@fresh/plugin-vite": "jsr:@fresh/plugin-vite@^1.1.2",
@@ -34,7 +43,8 @@
       "dom",
       "dom.asynciterable",
       "dom.iterable",
-      "deno.ns"
+      "deno.ns",
+      "deno.unstable"
     ],
     "jsx": "precompile",
     "jsxImportSource": "preact",

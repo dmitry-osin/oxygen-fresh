@@ -28,10 +28,10 @@
 7. Создать каталоги `data/`, `static/uploads/` и добавить их в `.gitignore` (ai/requirements.md:40-44).
 
 **Итог:**
-- Что сделано: - заполнить после выполнения этапа
-- Что отложено: - заполнить после выполнения этапа
-- Принятые решения: - заполнить после выполнения этапа
-- Описание: - заполнить после выполнения этапа
+- Что сделано: удален демо-код каркаса (islands/Counter.tsx, components/Button.tsx, routes/api/, демо-мидлварь и роут /api2/:name в main.ts, routes/index.tsx заменен на заглушку); установлены зависимости marked@18, highlight.js@11, bcryptjs@3, lucide-preact@1; созданы .env.example, types/index.ts (все интерфейсы), lib/kv.ts (KvKeys + incrementCounter), utils/slugify.ts (с транслитерацией кириллицы), utils/date.ts, utils/validate.ts; созданы data/ и static/uploads/ с .gitkeep; .gitignore обновлен.
+- Что отложено: ничего.
+- Принятые решения: bcryptjs вместо нативного bcrypt (pure JS, без postinstall-скриптов); Deno KV включен через поле "unstable": ["kv"] в deno.json (runtime требует --unstable-kv); "deno.unstable" добавлен в compilerOptions.lib; каталоги ai/ и .agents/ исключены из deno fmt/lint/check, чтобы не переформатировать документацию и скиллы; State в utils.ts стал пустым типом-заготовкой object.
+- Описание: каркас приведен в чистое состояние, базовый слой данных и утилиты готовы. Проверки: deno task check - зеленый; smoke-тесты slugify/validate/kv - успешны (тестовая kv.sqlite3 после проверки удалена).
 - Отложенные пункты занести в ai/tech-dep.md
 
 ---
