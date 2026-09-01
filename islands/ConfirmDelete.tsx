@@ -5,7 +5,7 @@
 import { useSignal } from "@preact/signals";
 
 export default function ConfirmDelete(
-  props: { itemName: string; action?: string },
+  props: { itemName: string; action?: string; actionUrl?: string },
 ) {
   const open = useSignal(false);
   return (
@@ -24,7 +24,11 @@ export default function ConfirmDelete(
             <p class="text-sm text-gray-600 mb-6">
               This action cannot be undone.
             </p>
-            <form method="post" class="flex gap-2 justify-end">
+            <form
+              method="post"
+              action={props.actionUrl}
+              class="flex gap-2 justify-end"
+            >
               <input
                 type="hidden"
                 name="action"

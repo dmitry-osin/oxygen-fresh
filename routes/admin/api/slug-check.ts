@@ -4,11 +4,15 @@
 
 import { define } from "@/utils.ts";
 import { isSlugTaken } from "@/lib/posts.ts";
+import { isPageSlugTaken } from "@/lib/pages.ts";
 import { isValidSlug } from "@/utils/validate.ts";
 
 export const handler = define.handlers(async (ctx) => {
   const slug = ctx.url.searchParams.get("slug") ?? "";
   const excludeId = ctx.url.searchParams.get("excludeId") ?? undefined;
-  const available = isValidSlug(slug) && !(await isSlugTaken(slug, excludeId));
-  return Response.json({ available });
+  const type = ctx.url.searchParams.get("type") ?? "post";
+  const taken = type === "page"
+    ? await isPageSlugTaken(slug, excludeId)
+    : await isSlugTaken(slug, excludeId);
+  return Response.json({ available: isValidSlug(slug) && !taken });
 });

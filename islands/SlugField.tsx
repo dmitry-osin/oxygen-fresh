@@ -6,7 +6,7 @@ import { useSignal } from "@preact/signals";
 type CheckState = "idle" | "checking" | "ok" | "taken";
 
 export default function SlugField(
-  props: { initialValue: string; excludeId: string },
+  props: { initialValue: string; excludeId: string; type?: "post" | "page" },
 ) {
   const value = useSignal(props.initialValue);
   const state = useSignal<CheckState>("idle");
@@ -21,7 +21,7 @@ export default function SlugField(
     const res = await fetch(
       `/admin/api/slug-check?slug=${
         encodeURIComponent(slug)
-      }&excludeId=${props.excludeId}`,
+      }&excludeId=${props.excludeId}&type=${props.type ?? "post"}`,
     );
     const body = res.ok ? await res.json() : null;
     state.value = body?.available ? "ok" : "taken";
