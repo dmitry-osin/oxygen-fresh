@@ -51,10 +51,10 @@
 6. Logout: очистка cookie и удаление сессии из KV (ai/requirements.md:324).
 
 **Итог:**
-- Что сделано: - заполнить после выполнения этапа
-- Что отложено: - заполнить после выполнения этапа
-- Принятые решения: - заполнить после выполнения этапа
-- Описание: - заполнить после выполнения этапа
+- Что сделано: созданы lib/auth.ts (bcrypt-хеширование через bcryptjs, сессии в KV с expireIn 7 дней, ensureAdminUser из ADMIN_PASSWORD_HASH, cookie-хелперы readSessionToken/setSessionCookie/clearSessionCookie), lib/rate-limit.ts (SlidingWindowRateLimiter), routes/_middleware.ts (CSP, nosniff, DENY, Referrer-Policy), routes/admin/login.tsx (форма + POST с rate limit 5/5мин), routes/admin/_middleware.ts (guard, редирект на /admin/login), routes/admin/logout.tsx (POST, удаление сессии и cookie), routes/admin/index.tsx (временная заглушка дашборда для проверки потока); State в utils.ts получил поле user?: User.
+- Что отложено: ничего. Заглушка routes/admin/index.tsx будет заменена настоящим дашбордом на этапе 7 (не долг, а плановая работа).
+- Принятые решения: отказ от @std/http - jsr.io висел при скачивании (два таймаута подряд), cookie-хелперы (~30 строк) написаны в lib/auth.ts; admin-пользователь создается лениво при первом логине из ADMIN_PASSWORD_HASH вместо отдельного setup-скрипта (проще, меньше кода, F9 допускает); Secure-флаг cookie ставится только когда SITE_URL начинается с https:// (иначе логин не работает на localhost); logout только через POST.
+- Описание: аутентификация и базовая безопасность работают end-to-end. Smoke-тест на dev-сервере: заголовки CSP/nosniff/DENY/Referrer-Policy есть; /admin без сессии -> 302 на логин; неверный пароль -> ошибка; верный пароль -> 303 + httpOnly SameSite=Strict cookie; /admin с cookie -> 200; logout -> 303, cookie обнулена, /admin снова 302; rate limiter блокирует с 6-й попытки. deno task check - зеленый. Тестовая kv.sqlite3 удалена.
 - Отложенные пункты занести в ai/tech-dep.md
 
 ---

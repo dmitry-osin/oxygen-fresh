@@ -1,7 +1,10 @@
 import { createDefine } from "fresh";
+import type { User } from "@/types/index.ts";
 
 // Shared state passed between middlewares, layouts and routes.
-// Fields are added as features land (e.g. the authenticated admin user).
-export type State = object;
+export interface State {
+  /** Authenticated admin user, set by routes/admin/_middleware.ts */
+  user?: User;
+}
 
 export const define = createDefine<State>();
