@@ -60,3 +60,31 @@ export async function incrementCounter(key: Deno.KvKey): Promise<number> {
     if (res.ok) return newValue;
   }
 }
+
+/** Atomically add a value to a string[] key (no duplicates). */
+export async function addToList(key: Deno.KvKey, value: string): Promise<void> {
+  for (;;) {
+    const entry = await kv.get<string[]>(key);
+    const list = entry.value ?? [];
+    if (list.includes(value)) return;
+    const res = await kv.atomic().check(entry).set(key, [...list, value])
+      .commit();
+    if (res.ok) return;
+  }
+}
+
+/** Atomically remove a value from a string[] key. */
+export async function removeFromList(
+  key: Deno.KvKey,
+  value: string,
+): Promise<void> {
+  for (;;) {
+    const entry = await kv.get<string[]>(key);
+    const list = entry.value ?? [];
+    if (!list.includes(value)) return;
+    const res = await kv.atomic().check(entry)
+      .set(key, list.filter((v) => v !== value))
+      .commit();
+    if (res.ok) return;
+  }
+}

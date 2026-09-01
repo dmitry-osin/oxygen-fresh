@@ -98,10 +98,10 @@
 8. Удаление поста: красная кнопка + confirm-модал с именем (ai/requirements.md:102).
 
 **Итог:**
-- Что сделано: - заполнить после выполнения этапа
-- Что отложено: - заполнить после выполнения этапа
-- Принятые решения: - заполнить после выполнения этапа
-- Описание: - заполнить после выполнения этапа
+- Что сделано: lib/posts.ts (чтение: listPublishedPosts/listDrafts/listAllPosts/getPostById/getPublishedBySlug/isSlugTaken/uniqueSlug) и lib/post-mutations.ts (запись: createPost/updatePost/publishPost/unpublishPost/deletePost, атомарная запись с индексами posts_by_tag/post_ids, снапшоты post_versions + post_version_meta); lib/versions.ts (listVersions/getVersion/restoreVersionToDraft); kv.ts: addToList/removeFromList; роуты routes/admin/posts/index.tsx (список с click-to-sort + New post), routes/admin/posts/[id].tsx (редактор, вкладки Edit/History), routes/admin/posts/[id]/versions/[versionId].tsx (read-only просмотр + Restore to draft), routes/admin/api/slug-check.ts; островки islands/SlugField.tsx (проверка slug on blur) и islands/ConfirmDelete.tsx (модал с именем); components/PostForm.tsx (все поля на экране).
+- Что отложено: ничего. Таб «History» переключается через ?tab= (без JS) - так задумано. Авто-публикация scheduled-постов - это F20 (этап 12), в этом этапе только хранение статуса и publishedAt.
+- Принятые решения: lib/posts.ts разделен на чтение (posts.ts) и запись (post-mutations.ts) из-за лимита 200 строк на файл; scheduled-посты хранятся в draft-пространстве ключей, чтобы не попадать на публичный сайт до срока; publish из редактора сначала сохраняет поля формы, потом публикует; восстановление версии создает новый черновик с новым id и суффиксом slug; удаление поста стирает и историю версий; смена статуса draft/scheduled недоступна для опубликованных (select disabled, статус меняется через Unpublish).
+- Описание: deno task check - зеленый. Smoke-тест на dev-сервере прошел полный цикл: логин -> создание черновика -> сохранение (валидация пустого title работает) -> публикация (снапшот создан, publishedAt выставлен) -> републикация (второй снапшот) -> вкладка History (2 версии) -> просмотр версии с бейджем -> Restore to draft (новый черновик) -> Unpublish (пост исчез из rss.xml) -> удаление обоих постов (post_ids, post_versions, posts_by_tag очищены). Отдельно проверен UTF-8 round-trip кириллицы через lib-слой (кракозябры в curl-тестах - артефакт кодировки Git Bash, не приложения). Тестовая kv.sqlite3 удалена.
 - Отложенные пункты занести в ai/tech-dep.md
 
 ---
