@@ -73,10 +73,10 @@
 5. Endpoint `routes/api/preview.ts`: серверный рендер Markdown для живого превью редактора (ai/requirements.md:279).
 
 **Итог:**
-- Что сделано: - заполнить после выполнения этапа
-- Что отложено: - заполнить после выполнения этапа
-- Принятые решения: - заполнить после выполнения этапа
-- Описание: - заполнить после выполнения этапа
+- Что сделано: созданы lib/markdown.ts (marked GFM + highlight.js через marked-highlight + sanitize-html, плюс plainText для excerpt), lib/seo.ts (siteUrl/absoluteUrl/canonicalUrl, SeoMetaData, postJsonLd BlogPosting), components/SeoMeta.tsx, components/JsonLd.tsx, lib/rss.ts (RSS 2.0 с content:encoded), routes/rss.xml.ts (с фильтром ?tag=), routes/sitemap.xml.ts, routes/robots.txt.ts, routes/api/preview.ts (только для авторизованных). В lib/posts.ts и lib/pages.ts добавлены read-хелперы listPublishedPosts/listPages (полный CRUD - на этапах 4-5). Установлены marked-highlight, sanitize-html, @types/sanitize-html.
+- Что отложено: привязка канала RSS к настройкам сайта (сейчас заглушка "oxygen-blog", будет заменена на F12 settings на этапе 9); риск блокировки JSON-LD строгим CSP - занесен в ai/tech-dep.md.
+- Принятые решения: sanitize-html (npm) как зрелый санитайзер вместо самописного; marked-highlight как официальное расширение marked для highlight.js; /api/preview закрыт сессией, чтобы не быть открытым рендер-эндпоинтом; вынос escapeXml в lib/rss.ts (переиспользуется в sitemap).
+- Описание: проверки пройдены. deno task check - зеленый. Юнит-smoke renderMarkdown: <script> вырезается, javascript: ссылки обезврежены, hljs-подсветка работает, plainText декодирует сущности. Серверный smoke: rss.xml отдает опубликованный пост с полным контентом, фильтр ?tag= работает; sitemap.xml включает индекс, пост и страницу; robots.txt корректен; /api/preview -> 401 без сессии и валидный HTML с сессией. Тестовая kv.sqlite3 удалена. Инцидент: после этапа 2 остался осиротевший vite-процесс на порту 5173, часть проверок пошла против него; процесс убит, проверки повторены на правильном сервере.
 - Отложенные пункты занести в ai/tech-dep.md
 
 ---
