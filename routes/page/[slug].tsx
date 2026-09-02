@@ -45,7 +45,7 @@ export default define.page<typeof handler>(function StaticPage({ data }) {
     <article>
       <h1 class="text-3xl font-bold mb-6">{page.title}</h1>
       <div
-        class="prose max-w-none"
+        class="prose dark:prose-invert max-w-none"
         // deno-lint-ignore react-no-danger -- sanitized server-side by renderMarkdown()
         dangerouslySetInnerHTML={{ __html: html }}
       />

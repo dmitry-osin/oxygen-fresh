@@ -15,11 +15,13 @@ export default define.page(async function App({ Component, url }) {
       <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        {/* Synchronous pre-paint theme init (F17); skips /admin. */}
+        <script src="/theme.js" />
         <link rel="icon" href={settings.faviconUrl ?? "/favicon.ico"} />
         <link rel="alternate" type="application/rss+xml" href="/rss.xml" />
         <title>{settings.siteName}</title>
       </head>
-      <body class="bg-white text-gray-900 antialiased">
+      <body class="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 antialiased">
         <Component />
       </body>
     </html>

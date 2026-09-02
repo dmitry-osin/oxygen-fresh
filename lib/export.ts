@@ -11,14 +11,16 @@ import { listTags } from "./tags.ts";
 import { getSettings } from "./settings.ts";
 import { getMenuItems } from "./menu.ts";
 import { nowIso } from "@/utils/date.ts";
-import type { MenuItem, Page, Post, Settings, Tag } from "@/types/index.ts";
+import type {
+  MenuItem,
+  Page,
+  Post,
+  RedirectEntry,
+  Settings,
+  Tag,
+} from "@/types/index.ts";
 
 export const EXPORT_VERSION = "1.0";
-
-export interface RedirectPair {
-  from: string;
-  to: string;
-}
 
 export interface ExportData {
   posts: Post[];
@@ -26,7 +28,7 @@ export interface ExportData {
   tags: Tag[];
   settings: Settings;
   menu: MenuItem[];
-  redirects: RedirectPair[];
+  redirects: RedirectEntry[];
 }
 
 export interface ExportFile {
@@ -35,11 +37,11 @@ export interface ExportFile {
   data: ExportData;
 }
 
-async function listRedirects(): Promise<RedirectPair[]> {
-  const redirects: RedirectPair[] = [];
-  const iter = kv.list<string>({ prefix: ["redirects"] });
+async function listRedirects(): Promise<RedirectEntry[]> {
+  const redirects: RedirectEntry[] = [];
+  const iter = kv.list<RedirectEntry>({ prefix: ["redirects"] });
   for await (const entry of iter) {
-    redirects.push({ from: String(entry.key[1]), to: entry.value });
+    redirects.push({ ...entry.value, from: String(entry.key[1]) });
   }
   return redirects;
 }

@@ -42,10 +42,14 @@ export default define.page<typeof handler>(function TagArchive({ data }) {
       <Header navLinks={navLinks} siteName={settings.siteName} />
       <main class="max-w-3xl mx-auto px-4 py-8">
         <h1 class="text-3xl font-bold mb-2">{tag.name}</h1>
-        {tag.description && <p class="text-gray-600 mb-6">{tag.description}</p>}
+        {tag.description && (
+          <p class="text-gray-600 dark:text-gray-400 mb-6">{tag.description}</p>
+        )}
         {posts.map((post) => <PostCard key={post.id} post={post} />)}
         {posts.length === 0 && (
-          <p class="text-gray-600">No published posts with this tag yet.</p>
+          <p class="text-gray-600 dark:text-gray-400">
+            No published posts with this tag yet.
+          </p>
         )}
       </main>
       <Footer siteName={settings.siteName} socialLinks={settings.socialLinks} />

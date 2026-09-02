@@ -14,6 +14,8 @@ const SECTIONS = [
   { href: "/admin/menu", label: "Menu" },
   { href: "/admin/settings", label: "Settings" },
   { href: "/admin/analytics", label: "Analytics" },
+  { href: "/admin/performance", label: "Performance" },
+  { href: "/admin/redirects", label: "Redirects" },
   { href: "/admin/export-import", label: "Backup" },
 ];
 

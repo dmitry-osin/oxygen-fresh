@@ -3,6 +3,7 @@
 // Source: ai/requirements.md F12 (schema 6.1).
 
 import { kv, KvKeys } from "./kv.ts";
+import { recordCache } from "./perf.ts";
 import type { Settings } from "@/types/index.ts";
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -19,10 +20,14 @@ let cached: { settings: Settings; at: number } | null = null;
 
 /** Current settings merged over the defaults, cached in memory for 60s. */
 export async function getSettings(): Promise<Settings> {
-  if (cached && Date.now() - cached.at < CACHE_TTL_MS) return cached.settings;
+  if (cached && Date.now() - cached.at < CACHE_TTL_MS) {
+    recordCache("settings", true);
+    return cached.settings;
+  }
   const stored = (await kv.get<Settings>(KvKeys.settings())).value;
   const settings = { ...DEFAULT_SETTINGS, ...stored };
   cached = { settings, at: Date.now() };
+  recordCache("settings", false);
   return settings;
 }
 

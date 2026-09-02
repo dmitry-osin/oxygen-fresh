@@ -45,6 +45,13 @@ export const KvKeys = {
   // Redirects
   redirect: (oldSlug: string) => ["redirects", oldSlug] as const,
 
+  // Search index (F16): inverted index word -> postIds, plus the word
+  // list per post so a re-index can remove stale entries.
+  searchIndex: (word: string, postId: string) =>
+    ["search_index", word, postId] as const,
+  searchIndexWord: (word: string) => ["search_index", word] as const,
+  searchWords: (postId: string) => ["search_words", postId] as const,
+
   // Users / Auth
   user: (username: string) => ["users", username] as const,
   session: (token: string) => ["sessions", token] as const,

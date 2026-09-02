@@ -14,6 +14,7 @@ import { slugify } from "@/utils/slugify.ts";
 import { isValidSlug } from "@/utils/validate.ts";
 import { nowIso } from "@/utils/date.ts";
 import { plainText } from "./markdown.ts";
+import { indexPost, unindexPost } from "./search.ts";
 
 /** Where a post lives: public space only when published. */
 function postKey(post: Post) {
@@ -128,6 +129,7 @@ export async function updatePost(
   }
   const updated = applyInput(post, input);
   await commitPost(updated, post);
+  if (updated.status === "published") await indexPost(updated);
   return { ok: true, post: updated };
 }
 
@@ -147,6 +149,7 @@ export async function publishPost(id: string): Promise<SaveResult> {
   };
   await commitPost(published, post);
   await createSnapshot(published);
+  await indexPost(published);
   return { ok: true, post: published };
 }
 
@@ -156,10 +159,11 @@ export async function unpublishPost(id: string): Promise<SaveResult> {
   if (!post) return { ok: false, error: "Post not found." };
   const draft: Post = { ...post, status: "draft", updatedAt: nowIso() };
   await commitPost(draft, post);
+  await unindexPost(draft.id);
   return { ok: true, post: draft };
 }
 
-/** Delete the post, its indexes and its version history. */
+/** Delete the post, its indexes, search entries and version history. */
 export async function deletePost(id: string): Promise<boolean> {
   const post = await getPostById(id);
   if (!post) return false;
@@ -168,6 +172,7 @@ export async function deletePost(id: string): Promise<boolean> {
   op.delete(KvKeys.postVersionMeta(post.id));
   await op.commit();
   await removeFromList(KvKeys.postIds(), id);
+  await unindexPost(id);
   const iter = kv.list({ prefix: KvKeys.postVersionPrefix(id) });
   for await (const entry of iter) await kv.delete(entry.key);
   return true;

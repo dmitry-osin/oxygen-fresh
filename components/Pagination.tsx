@@ -17,7 +17,9 @@ export function Pagination(
           </a>
         )
         : <span />}
-      <span class="text-gray-500">Page {page} of {totalPages}</span>
+      <span class="text-gray-500 dark:text-gray-400">
+        Page {page} of {totalPages}
+      </span>
       {page < totalPages
         ? (
           <a href={`${basePath}?page=${page + 1}`} class="hover:underline">

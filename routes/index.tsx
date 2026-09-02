@@ -42,7 +42,9 @@ export default define.page<typeof handler>(function Home({ data }) {
       <Header navLinks={navLinks} siteName={settings.siteName} />
       <main class="max-w-3xl mx-auto px-4 py-8">
         {posts.map((post) => <PostCard key={post.id} post={post} />)}
-        {posts.length === 0 && <p class="text-gray-600">No posts yet.</p>}
+        {posts.length === 0 && (
+          <p class="text-gray-600 dark:text-gray-400">No posts yet.</p>
+        )}
         <Pagination page={page} totalPages={totalPages} basePath="/" />
       </main>
       <Footer siteName={settings.siteName} socialLinks={settings.socialLinks} />

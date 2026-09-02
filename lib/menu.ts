@@ -4,6 +4,7 @@
 
 import { kv, KvKeys } from "./kv.ts";
 import { listPages } from "./pages.ts";
+import { recordCache } from "./perf.ts";
 import type { MenuItem } from "@/types/index.ts";
 
 const CACHE_TTL_MS = 60_000;
@@ -11,9 +12,13 @@ let cached: { items: MenuItem[]; at: number } | null = null;
 
 /** Raw menu items from KV, cached in memory for 60 seconds. */
 export async function getMenuItems(): Promise<MenuItem[]> {
-  if (cached && Date.now() - cached.at < CACHE_TTL_MS) return cached.items;
+  if (cached && Date.now() - cached.at < CACHE_TTL_MS) {
+    recordCache("menu", true);
+    return cached.items;
+  }
   const items = (await kv.get<MenuItem[]>(KvKeys.menuItems())).value ?? [];
   cached = { items, at: Date.now() };
+  recordCache("menu", false);
   return items;
 }
 

@@ -51,7 +51,7 @@ export default define.page<typeof handler>(function PostPage({ data }) {
         <p class="text-sm text-gray-500 mb-6">{formatDate(post.publishedAt)}</p>
       )}
       <div
-        class="prose max-w-none"
+        class="prose dark:prose-invert max-w-none"
         // deno-lint-ignore react-no-danger -- sanitized server-side by renderMarkdown()
         dangerouslySetInnerHTML={{ __html: html }}
       />

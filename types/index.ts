@@ -113,3 +113,10 @@ export interface Session {
   /** ISO 8601 */
   expiresAt: string;
 }
+
+/** Managed redirect (F18): stored at ["redirects", from]. */
+export interface RedirectEntry {
+  from: string;
+  to: string;
+  code: 301 | 302;
+}

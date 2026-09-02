@@ -8,8 +8,17 @@
 import { kv, KvKeys } from "./kv.ts";
 import { saveMenuItems } from "./menu.ts";
 import { DEFAULT_SETTINGS, saveSettings } from "./settings.ts";
+import { indexPost } from "./search.ts";
+import { invalidateRedirectCache, validateRedirect } from "./redirects.ts";
 import { EXPORT_VERSION, type ExportData } from "./export.ts";
-import type { MenuItem, Page, Post, Settings, Tag } from "@/types/index.ts";
+import type {
+  MenuItem,
+  Page,
+  Post,
+  RedirectEntry,
+  Settings,
+  Tag,
+} from "@/types/index.ts";
 
 export type ImportResult =
   | { ok: true; data: ExportData }
@@ -131,8 +140,13 @@ export function validateImport(raw: unknown): ImportResult {
   const redirects = validateList(
     raw.data.redirects,
     (item) =>
-      isRecord(item) && hasStrings(item, ["from", "to"])
-        ? item as { from: string; to: string }
+      isRecord(item) && hasStrings(item, ["from", "to"]) &&
+        validateRedirect(
+          String(item.from),
+          String(item.to),
+          Number(item.code),
+        )
+        ? item as unknown as RedirectEntry
         : null,
     "redirects",
   );
@@ -160,6 +174,8 @@ function postKey(post: Post) {
 async function applyPosts(posts: Post[]): Promise<void> {
   await wipePrefix(["posts"]);
   await wipePrefix(["posts_by_tag"]);
+  await wipePrefix(["search_index"]);
+  await wipePrefix(["search_words"]);
   const op = kv.atomic();
   for (const post of posts) {
     op.set(postKey(post), post);
@@ -169,6 +185,9 @@ async function applyPosts(posts: Post[]): Promise<void> {
   }
   await op.commit();
   await kv.set(KvKeys.postIds(), posts.map((post) => post.id));
+  for (const post of posts) {
+    if (post.status === "published") await indexPost(post);
+  }
 }
 
 async function applyPages(pages: Page[]): Promise<void> {
@@ -187,13 +206,12 @@ async function applyTags(tags: Tag[]): Promise<void> {
   await kv.set(KvKeys.tagIds(), tags.map((tag) => tag.slug));
 }
 
-async function applyRedirects(
-  redirects: { from: string; to: string }[],
-): Promise<void> {
+async function applyRedirects(redirects: RedirectEntry[]): Promise<void> {
   await wipePrefix(["redirects"]);
   for (const redirect of redirects) {
-    await kv.set(KvKeys.redirect(redirect.from), redirect.to);
+    await kv.set(KvKeys.redirect(redirect.from), redirect);
   }
+  invalidateRedirectCache();
 }
 
 /** Replace all content namespaces with validated export data. */

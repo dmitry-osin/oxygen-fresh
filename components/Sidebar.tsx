@@ -1,5 +1,5 @@
 // Sidebar for the "default" template (F7): recent posts + tag cloud.
-// Server-rendered, no client JS.
+// Server-rendered, no client JS. Dark variants for F17.
 
 import type { Post } from "@/types/index.ts";
 import { TagBadge } from "./TagBadge.tsx";
@@ -14,13 +14,16 @@ export function Sidebar(
     <aside class="lg:w-64 shrink-0 space-y-8">
       {recentPosts.length > 0 && (
         <section>
-          <h3 class="text-sm font-bold uppercase tracking-wide text-gray-500 mb-2">
+          <h3 class="text-sm font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">
             Recent posts
           </h3>
           <ul class="space-y-1">
             {recentPosts.map((post) => (
               <li key={post.id}>
-                <a href={`/${post.slug}`} class="text-gray-700 hover:underline">
+                <a
+                  href={`/${post.slug}`}
+                  class="text-gray-700 dark:text-gray-300 hover:underline"
+                >
                   {post.title}
                 </a>
               </li>
@@ -30,7 +33,7 @@ export function Sidebar(
       )}
       {tags.length > 0 && (
         <section>
-          <h3 class="text-sm font-bold uppercase tracking-wide text-gray-500 mb-2">
+          <h3 class="text-sm font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">
             Tags
           </h3>
           <p>
