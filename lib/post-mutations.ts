@@ -133,8 +133,15 @@ export async function updatePost(
   return { ok: true, post: updated };
 }
 
-/** Publish: move to the public space, set publishedAt, save a snapshot. */
-export async function publishPost(id: string): Promise<SaveResult> {
+/**
+ * Publish: move to the public space, set publishedAt, save a snapshot.
+ * An explicit publishedAt keeps the scheduled time when the scheduler
+ * auto-publishes a due post (F20).
+ */
+export async function publishPost(
+  id: string,
+  publishedAt?: string,
+): Promise<SaveResult> {
   const post = await getPostById(id);
   if (!post) return { ok: false, error: "Post not found." };
   if (await isSlugTaken(post.slug, id)) {
@@ -144,7 +151,7 @@ export async function publishPost(id: string): Promise<SaveResult> {
   const published: Post = {
     ...post,
     status: "published",
-    publishedAt: now,
+    publishedAt: publishedAt ?? now,
     updatedAt: now,
   };
   await commitPost(published, post);

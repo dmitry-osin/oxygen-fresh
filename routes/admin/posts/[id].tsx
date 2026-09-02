@@ -118,36 +118,68 @@ function HistoryTable(
   if (versions.length === 0) {
     return <p class="text-gray-600">No published versions yet.</p>;
   }
+  const options = versions.map((v) => (
+    <option key={v.versionId} value={v.versionId}>
+      {formatDateTime(v.versionId)} - {v.title}
+    </option>
+  ));
   return (
-    <table class="w-full text-left border-collapse">
-      <thead>
-        <tr class="border-b">
-          <th class="py-2">Published at</th>
-          <th class="py-2">Title</th>
-          <th class="py-2">Tags</th>
-          <th class="py-2"></th>
-        </tr>
-      </thead>
-      <tbody>
-        {versions.map((v) => (
-          <tr key={v.versionId} class="border-b">
-            <td class="py-2 text-sm text-gray-600">
-              {formatDateTime(v.versionId)}
-            </td>
-            <td class="py-2">{v.title}</td>
-            <td class="py-2 text-sm text-gray-600">{v.tags.join(", ")}</td>
-            <td class="py-2">
-              <a
-                href={`/admin/posts/${post.id}/versions/${v.versionId}`}
-                class="underline text-sm"
-              >
-                View
-              </a>
-            </td>
+    <div>
+      <form
+        method="get"
+        action={`/admin/posts/${post.id}/versions/diff`}
+        class="flex flex-wrap items-center gap-2 mb-6"
+      >
+        <select
+          name="left"
+          class="border border-gray-300 rounded px-2 py-1 text-sm"
+        >
+          {options}
+        </select>
+        <span class="text-sm text-gray-500">&harr;</span>
+        <select
+          name="right"
+          class="border border-gray-300 rounded px-2 py-1 text-sm"
+        >
+          {options}
+        </select>
+        <button
+          type="submit"
+          class="border border-gray-300 rounded px-3 py-1 text-sm font-medium"
+        >
+          Compare
+        </button>
+      </form>
+      <table class="w-full text-left border-collapse">
+        <thead>
+          <tr class="border-b">
+            <th class="py-2">Published at</th>
+            <th class="py-2">Title</th>
+            <th class="py-2">Tags</th>
+            <th class="py-2"></th>
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {versions.map((v) => (
+            <tr key={v.versionId} class="border-b">
+              <td class="py-2 text-sm text-gray-600">
+                {formatDateTime(v.versionId)}
+              </td>
+              <td class="py-2">{v.title}</td>
+              <td class="py-2 text-sm text-gray-600">{v.tags.join(", ")}</td>
+              <td class="py-2">
+                <a
+                  href={`/admin/posts/${post.id}/versions/${v.versionId}`}
+                  class="underline text-sm"
+                >
+                  View
+                </a>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 

@@ -5,12 +5,16 @@
 import { Head } from "fresh/runtime";
 import { HttpError } from "fresh";
 import { define } from "@/utils.ts";
-import { getPublishedBySlug, listPublishedPosts } from "@/lib/posts.ts";
+import {
+  getPublishedBySlug,
+  listPublishedPosts,
+  relatedPosts,
+} from "@/lib/posts.ts";
 import { listTags } from "@/lib/tags.ts";
 import { trackView } from "@/lib/analytics.ts";
 import { getNavLinks } from "@/lib/menu.ts";
 import { getSettings } from "@/lib/settings.ts";
-import { renderMarkdown } from "@/lib/markdown.ts";
+import { renderMarkdownWithToc } from "@/lib/markdown.ts";
 import { canonicalUrl, postJsonLd } from "@/lib/seo.ts";
 import { formatDate } from "@/utils/date.ts";
 import { Header } from "@/components/Header.tsx";
@@ -23,27 +27,30 @@ import { TagBadge } from "@/components/TagBadge.tsx";
 export const handler = define.handlers(async (ctx) => {
   const post = await getPublishedBySlug(ctx.params.slug);
   if (!post) throw new HttpError(404);
-  const [settings, navLinks, recent, tags] = await Promise.all([
+  const [settings, navLinks, recent, tags, related] = await Promise.all([
     getSettings(),
     getNavLinks(),
     listPublishedPosts(),
     listTags(),
+    relatedPosts(post, 3),
     trackView("post", post.id),
   ]);
   return {
     data: {
       post,
-      html: renderMarkdown(post.content),
+      ...renderMarkdownWithToc(post.content),
       settings,
       navLinks,
       recentPosts: recent.filter((p) => p.id !== post.id).slice(0, 5),
       tags,
+      related,
     },
   };
 });
 
 export default define.page<typeof handler>(function PostPage({ data }) {
-  const { post, html, settings, navLinks, recentPosts, tags } = data;
+  const { post, html, toc, settings, navLinks, recentPosts, tags, related } =
+    data;
   const article = (
     <article>
       <h1 class="text-3xl font-bold mb-2">{post.title}</h1>
@@ -62,6 +69,20 @@ export default define.page<typeof handler>(function PostPage({ data }) {
             return <TagBadge key={slug} slug={slug} name={tag?.name} />;
           })}
         </p>
+      )}
+      {related.length > 0 && (
+        <section class="mt-12 not-prose">
+          <h2 class="text-xl font-bold mb-3">Related posts</h2>
+          <ul class="space-y-1">
+            {related.map((entry) => (
+              <li key={entry.id}>
+                <a href={`/${entry.slug}`} class="underline">
+                  {entry.title}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
     </article>
   );
@@ -84,7 +105,7 @@ export default define.page<typeof handler>(function PostPage({ data }) {
         : (
           <main class="max-w-5xl mx-auto px-4 py-8 flex flex-col lg:flex-row gap-12">
             <div class="flex-1 min-w-0">{article}</div>
-            <Sidebar recentPosts={recentPosts} tags={tags} />
+            <Sidebar recentPosts={recentPosts} tags={tags} toc={toc} />
           </main>
         )}
       <Footer siteName={settings.siteName} socialLinks={settings.socialLinks} />

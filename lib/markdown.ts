@@ -6,6 +6,7 @@ import { Marked } from "marked";
 import { markedHighlight } from "marked-highlight";
 import hljs from "highlight.js";
 import sanitizeHtml from "sanitize-html";
+import { slugify } from "@/utils/slugify.ts";
 
 const marked = new Marked(
   { gfm: true, breaks: false, async: false },
@@ -64,6 +65,48 @@ const SANITIZE_OPTIONS: sanitizeHtml.IOptions = {
 export function renderMarkdown(markdown: string): string {
   const html = marked.parse(markdown, { async: false }) as string;
   return sanitizeHtml(html, SANITIZE_OPTIONS);
+}
+
+export interface TocEntry {
+  level: 2 | 3;
+  text: string;
+  id: string;
+}
+
+/** Decode the handful of entities slugify should not see. */
+function decodeEntities(text: string): string {
+  return text
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#0?39;/g, "'")
+    .replace(/&amp;/g, "&");
+}
+
+/**
+ * Add anchor ids to H2/H3 and collect them as a table of contents (F22).
+ * Ids are generated server-side after sanitization (slug of the heading
+ * text, "-2" suffix on duplicates), so they cannot be injected.
+ */
+export function renderMarkdownWithToc(markdown: string): {
+  html: string;
+  toc: TocEntry[];
+} {
+  const counts = new Map<string, number>();
+  const toc: TocEntry[] = [];
+  const html = renderMarkdown(markdown).replace(
+    /<h([23])>(.*?)<\/h\1>/g,
+    (_match, level: string, inner: string) => {
+      const text = decodeEntities(inner.replace(/<[^>]+>/g, ""));
+      const base = slugify(text) || "section";
+      const seen = counts.get(base) ?? 0;
+      counts.set(base, seen + 1);
+      const id = seen === 0 ? base : `${base}-${seen}`;
+      toc.push({ level: Number(level) as 2 | 3, text, id });
+      return `<h${level} id="${id}">${inner}</h${level}>`;
+    },
+  );
+  return { html, toc };
 }
 
 // Decode order matters: &amp; must be last to avoid double-unescaping.

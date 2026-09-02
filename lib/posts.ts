@@ -95,3 +95,22 @@ export async function uniqueSlug(
     if (!(await isSlugTaken(candidate, excludeId))) return candidate;
   }
 }
+
+/** Up to `limit` published posts sharing the most tags (F21). */
+export async function relatedPosts(
+  post: Post,
+  limit = 3,
+): Promise<Post[]> {
+  const scored = (await listPublishedPosts())
+    .filter((candidate) => candidate.id !== post.id)
+    .map((candidate) => ({
+      post: candidate,
+      score: candidate.tags.filter((tag) => post.tags.includes(tag)).length,
+    }))
+    .filter((entry) => entry.score > 0)
+    .sort((a, b) =>
+      b.score - a.score ||
+      (b.post.publishedAt ?? "").localeCompare(a.post.publishedAt ?? "")
+    );
+  return scored.slice(0, limit).map((entry) => entry.post);
+}
