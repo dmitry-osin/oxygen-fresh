@@ -14,6 +14,7 @@ const SECTIONS = [
   { href: "/admin/menu", label: "Menu" },
   { href: "/admin/settings", label: "Settings" },
   { href: "/admin/analytics", label: "Analytics" },
+  { href: "/admin/export-import", label: "Backup" },
 ];
 
 function isActive(pathname: string, href: string): boolean {

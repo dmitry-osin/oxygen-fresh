@@ -7,6 +7,7 @@ import { define } from "@/utils.ts";
 import { getPageBySlug } from "@/lib/pages.ts";
 import { getNavLinks } from "@/lib/menu.ts";
 import { getSettings } from "@/lib/settings.ts";
+import { trackView } from "@/lib/analytics.ts";
 import { renderMarkdown } from "@/lib/markdown.ts";
 import { canonicalUrl } from "@/lib/seo.ts";
 import { Header } from "@/components/Header.tsx";
@@ -24,6 +25,7 @@ export const handler = define.handlers(async (ctx) => {
     getNavLinks(),
     listPublishedPosts(),
     listTags(),
+    trackView("page", page.id),
   ]);
   return {
     data: {

@@ -7,6 +7,7 @@ import { HttpError } from "fresh";
 import { define } from "@/utils.ts";
 import { getPublishedBySlug, listPublishedPosts } from "@/lib/posts.ts";
 import { listTags } from "@/lib/tags.ts";
+import { trackView } from "@/lib/analytics.ts";
 import { getNavLinks } from "@/lib/menu.ts";
 import { getSettings } from "@/lib/settings.ts";
 import { renderMarkdown } from "@/lib/markdown.ts";
@@ -27,6 +28,7 @@ export const handler = define.handlers(async (ctx) => {
     getNavLinks(),
     listPublishedPosts(),
     listTags(),
+    trackView("post", post.id),
   ]);
   return {
     data: {
