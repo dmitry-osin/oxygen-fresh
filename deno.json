@@ -25,6 +25,7 @@
   ],
   "imports": {
     "@/": "./",
+    "@tailwindcss/typography": "npm:@tailwindcss/typography@^0.5.20",
     "@types/sanitize-html": "npm:@types/sanitize-html@^2.16.1",
     "bcryptjs": "npm:bcryptjs@^3.0.3",
     "fresh": "jsr:@fresh/core@^2.3.3",

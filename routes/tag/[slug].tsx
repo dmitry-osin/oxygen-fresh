@@ -1,45 +1,54 @@
 // Public tag archive: published posts carrying the tag.
-// Source: ai/requirements.md F3 (tag page /tag/:slug).
-// Minimal markup for now; the public site design lands in stage 6.
+// Source: ai/requirements.md F3 (tag page /tag/:slug), UI 5.2.
 
 import { Head } from "fresh/runtime";
 import { HttpError } from "fresh";
 import { define } from "@/utils.ts";
 import { getTag, listPostsByTag } from "@/lib/tags.ts";
-import { formatDate } from "@/utils/date.ts";
+import { getNavLinks } from "@/lib/menu.ts";
+import { getSettings } from "@/lib/settings.ts";
+import { canonicalUrl } from "@/lib/seo.ts";
+import { Header } from "@/components/Header.tsx";
+import { Footer } from "@/components/Footer.tsx";
+import { PostCard } from "@/components/PostCard.tsx";
+import { SeoMeta } from "@/components/SeoMeta.tsx";
 
 export const handler = define.handlers(async (ctx) => {
   const tag = await getTag(ctx.params.slug);
   if (!tag) throw new HttpError(404);
-  const posts = await listPostsByTag(tag.slug);
-  return { data: { tag, posts } };
+  const [posts, settings, navLinks] = await Promise.all([
+    listPostsByTag(tag.slug),
+    getSettings(),
+    getNavLinks(),
+  ]);
+  return { data: { tag, posts, settings, navLinks } };
 });
 
 export default define.page<typeof handler>(function TagArchive({ data }) {
-  const { tag, posts } = data;
+  const { tag, posts, settings, navLinks } = data;
   return (
-    <div class="px-4 py-8 mx-auto max-w-2xl">
+    <>
       <Head>
-        <title>{tag.name} - oxygen-blog</title>
+        <SeoMeta
+          meta={{
+            title: `${tag.name} - ${settings.siteName}`,
+            description: tag.description ??
+              `Posts tagged ${tag.name} on ${settings.siteName}`,
+            canonicalUrl: canonicalUrl(`/tag/${tag.slug}`),
+            ogType: "website",
+          }}
+        />
       </Head>
-      <h1 class="text-3xl font-bold mb-2">{tag.name}</h1>
-      {tag.description && <p class="text-gray-600 mb-6">{tag.description}</p>}
-      <ul class="space-y-4">
-        {posts.map((post) => (
-          <li key={post.id}>
-            <a href={`/${post.slug}`} class="text-xl underline">
-              {post.title}
-            </a>
-            <p class="text-sm text-gray-600">
-              {post.publishedAt ? formatDate(post.publishedAt) : ""}
-              {post.excerpt ? ` - ${post.excerpt}` : ""}
-            </p>
-          </li>
-        ))}
-      </ul>
-      {posts.length === 0 && (
-        <p class="text-gray-600">No published posts with this tag yet.</p>
-      )}
-    </div>
+      <Header navLinks={navLinks} siteName={settings.siteName} />
+      <main class="max-w-3xl mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold mb-2">{tag.name}</h1>
+        {tag.description && <p class="text-gray-600 mb-6">{tag.description}</p>}
+        {posts.map((post) => <PostCard key={post.id} post={post} />)}
+        {posts.length === 0 && (
+          <p class="text-gray-600">No published posts with this tag yet.</p>
+        )}
+      </main>
+      <Footer siteName={settings.siteName} />
+    </>
   );
 });

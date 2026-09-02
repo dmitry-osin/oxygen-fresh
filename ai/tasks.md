@@ -143,10 +143,10 @@
 7. Проверить: ноль клиентского JS на публичных страницах - без островков и гидратации (ai/requirements.md:109, 530); типографика-first дизайн, mobile-first Tailwind (ai/requirements.md:110-111).
 
 **Итог:**
-- Что сделано: - заполнить после выполнения этапа
-- Что отложено: - заполнить после выполнения этапа
-- Принятые решения: - заполнить после выполнения этапа
-- Описание: - заполнить после выполнения этапа
+- Что сделано: routes/_app.tsx (lang=ru, favicon, rss alternate, базовые стили body); подключен @tailwindcss/typography (класс prose); lib/menu.ts (getMenuItems с in-memory кэшем 60с, getNavLinks с fallback на страницы showInMenu); lib/settings.ts (getSettings с DEFAULT_SETTINGS - создан раньше этапа 9, т.к. нужен публичным роутам); компоненты Header, Footer, Sidebar (recent posts + теги), PostCard, TagBadge, Pagination; routes/index.tsx (пагинация по postsPerPage); routes/[slug].tsx (пост: шаблоны default/full-width, SeoMeta, JSON-LD BlogPosting); routes/page/[slug].tsx (страница, тот же шаблонный механизм); routes/tag/[slug].tsx переведен на общие компоненты.
+- Что отложено: ничего. PageCard.tsx из плана не создан - нет ни одного места, где он нужен (YAGNI, ai/requirements.md:91).
+- Принятые решения: lib/settings.ts создан на этом этапе (read-only с дефолтами), чтобы не плодить временные константы siteName/postsPerPage; запись настроек и страница админки - по-прежнему этап 9; при пустом меню навигация строится из страниц с showInMenu (осмысленный дефолт до появления menu builder); счетчики просмотров НЕ добавлены в публичные роуты - это этап 10 (F13).
+- Описание: deno task check - зеленый. Smoke-тест (seed: 2 поста, страница about в меню, тег tech, postsPerPage=1): главная отдает один пост и пагинацию (Page 1 of 2, Older posts), ?page=2 - второй пост; страница поста содержит og:type=article, canonical, JSON-LD BlogPosting, сайдбар; единственный script на странице - ld+json (ноль клиентского JS подтверждено); /page/about работает, в шаблоне full-width сайдбар отсутствует; /tag/tech работает; неизвестный slug -> 404; навигация собрана из showInMenu-страницы. Тестовая БД удалена, порт свободен, сирот нет.
 - Отложенные пункты занести в ai/tech-dep.md
 
 ---
