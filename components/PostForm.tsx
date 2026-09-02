@@ -1,10 +1,10 @@
 // Post editor form: every editable field is visible on screen
 // (no hidden "advanced" panels). Source: ai/requirements.md 5.1, F1.
-// The plain textarea is replaced by the split-pane MarkdownEditor island
-// in stage 7 (F4).
+// Content editing uses the split-pane MarkdownEditor island (F4).
 
 import type { Post } from "@/types/index.ts";
 import SlugField from "@/islands/SlugField.tsx";
+import MarkdownEditor from "@/islands/MarkdownEditor.tsx";
 
 const inputCls = "w-full border border-gray-300 rounded px-3 py-2";
 const labelCls = "block text-sm font-medium mb-1";
@@ -34,14 +34,7 @@ export function PostForm({ post }: { post: Post }) {
       </div>
       <div>
         <label class={labelCls} for="content">Content (Markdown)</label>
-        <textarea
-          id="content"
-          name="content"
-          rows={18}
-          class={`${inputCls} font-mono`}
-        >
-          {post.content}
-        </textarea>
+        <MarkdownEditor initialContent={post.content} />
       </div>
       <div>
         <label class={labelCls} for="excerpt">

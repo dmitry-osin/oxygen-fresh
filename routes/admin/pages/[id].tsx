@@ -12,6 +12,7 @@ import {
 } from "@/lib/pages.ts";
 import ConfirmDelete from "@/islands/ConfirmDelete.tsx";
 import SlugField from "@/islands/SlugField.tsx";
+import MarkdownEditor from "@/islands/MarkdownEditor.tsx";
 
 const inputCls = "w-full border border-gray-300 rounded px-3 py-2";
 const labelCls = "block text-sm font-medium mb-1";
@@ -91,14 +92,7 @@ export default define.page<typeof handler>(function PageEditor({ data }) {
         </div>
         <div>
           <label class={labelCls} for="content">Content (Markdown)</label>
-          <textarea
-            id="content"
-            name="content"
-            rows={18}
-            class={`${inputCls} font-mono`}
-          >
-            {page.content}
-          </textarea>
+          <MarkdownEditor initialContent={page.content} />
         </div>
         <div>
           <label class={labelCls} for="template">Template</label>
