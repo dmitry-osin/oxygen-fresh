@@ -3,7 +3,8 @@
 // tag references become internal tag slugs (missing tags are created).
 // Source: ai/requirements.md 405-407.
 
-import TurndownService from "turndown";
+import { createRequire } from "node:module";
+import type TurndownService from "turndown";
 import { XMLParser } from "fast-xml-parser";
 import { createPost } from "./post-mutations.ts";
 import { createTag } from "./tags.ts";
@@ -21,7 +22,17 @@ export interface ExternalPost {
   tags: ExternalTag[];
 }
 
-const turndown = new TurndownService({
+// turndown's ESM build falls back to require() for its DOM parser,
+// which crashes inside the bundled server output. Loading the CommonJS
+// build at runtime keeps it out of the bundler entirely.
+const nodeRequire = createRequire(import.meta.url);
+const turndownModule = nodeRequire("turndown") as
+  | typeof TurndownService
+  | { default: typeof TurndownService };
+const Turndown = typeof turndownModule === "function"
+  ? turndownModule
+  : turndownModule.default;
+const turndown = new Turndown({
   headingStyle: "atx",
   codeBlockStyle: "fenced",
 });

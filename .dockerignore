@@ -1,0 +1,15 @@
+# Never bake local state, secrets or build output into the image.
+.env
+.git
+.gitignore
+node_modules
+_fresh
+data
+static/uploads/*
+!static/uploads/.gitkeep
+tmp-smoke
+backups
+ai
+.agents
+docs
+*.md

@@ -7,7 +7,7 @@
     "check": "deno fmt --check . && deno lint . && deno check",
     "dev": "vite",
     "build": "vite build",
-    "start": "deno serve -A _fresh/server.js",
+    "start": "deno serve --allow-net --allow-env --allow-read --allow-write _fresh/server.js",
     "update": "deno run -A -r jsr:@fresh/update ."
   },
   "lint": {
@@ -26,6 +26,7 @@
   "imports": {
     "@/": "./",
     "@tailwindcss/typography": "npm:@tailwindcss/typography@^0.5.20",
+    "@types/node": "npm:@types/node@^26.4.0",
     "@types/sanitize-html": "npm:@types/sanitize-html@^2.16.1",
     "@types/turndown": "npm:@types/turndown@^5.0.6",
     "bcryptjs": "npm:bcryptjs@^3.0.3",

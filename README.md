@@ -1,17 +1,65 @@
-# Fresh project
+# oxygen-blog
 
-Your new Fresh project is ready to go. You can follow the Fresh "Getting
-Started" guide here: https://fresh.deno.dev/docs/getting-started
+A minimal, fast, self-hosted Markdown blog engine. Server-first rendering, zero
+client-side JavaScript on the public site (the only exception: the dark-mode
+toggle), Deno KV as the single database, snapshots of every post on publish.
 
-### Usage
+Ghost's feature set; WordPress's complexity is forbidden.
 
-Make sure to install Deno:
-https://docs.deno.com/runtime/getting_started/installation
+## Stack
 
-Then start the project in development mode:
+Deno 2.x, Fresh 2 (islands architecture), Deno KV (SQLite-backed), Tailwind CSS
+4, marked + highlight.js, bcrypt sessions.
+
+## Development
+
+```sh
+deno install          # dependencies
+cp .env.example .env  # fill in ADMIN_PASSWORD_HASH, SESSION_SECRET, SITE_URL
+deno task dev         # http://localhost:5173
+```
+
+Admin panel: `/admin`. The admin user is created lazily from
+`ADMIN_PASSWORD_HASH` on first login. Generate the hash with:
+
+```sh
+deno eval 'import bcrypt from "npm:bcryptjs"; console.log(bcrypt.hashSync("your-password", 10))'
+```
+
+Wrap the hash in single quotes in `.env` - bcrypt hashes contain `$`, which the
+env loader would otherwise expand.
+
+Useful tasks: `deno task check` (fmt + lint + type check), `deno task build`,
+`deno task start` (production server on :8000).
+
+## Features
+
+- Posts and pages in Markdown with a split-pane editor, live preview and media
+  library (drag-and-drop uploads)
+- Publish snapshots and version history (view, restore, side-by-side diff)
+- Tags, menu builder, site settings, 301/302 redirects
+- SEO: OpenGraph, canonical URLs, JSON-LD, sitemap.xml, robots.txt, RSS
+- Analytics (views, daily chart), performance dashboard, JSON export/import,
+  WordPress/Ghost import as drafts
+- Server-side search, related posts, TOC, scheduled posts
+- Light/dark theme for the admin and the public site
+
+## Production
+
+Single Docker container behind Nginx, backups via cron: see
+[docs/deployment.md](docs/deployment.md).
+
+## Project layout
 
 ```
-deno task dev
+routes/      file-based routes (public site + /admin)
+islands/     client-hydrated components (admin + theme toggle)
+components/  server-rendered components
+lib/         data and domain logic (KV access, markdown, auth, ...)
+types/       TypeScript interfaces
+utils/       slugify, dates, validation
+static/      static assets, uploads/ is a Docker volume
+data/        kv.sqlite3, a Docker volume
+docs/        deployment, backups, nginx example
+ai/          agent-facing plan and requirements (not part of the app)
 ```
-
-This will watch the project directory and restart as necessary.
