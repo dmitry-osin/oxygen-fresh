@@ -70,7 +70,7 @@ export default define.page<typeof handler>(function StaticPage({ data }) {
             <Sidebar recentPosts={recentPosts} tags={tags} />
           </main>
         )}
-      <Footer siteName={settings.siteName} />
+      <Footer siteName={settings.siteName} socialLinks={settings.socialLinks} />
     </>
   );
 });

@@ -48,7 +48,7 @@ export default define.page<typeof handler>(function TagArchive({ data }) {
           <p class="text-gray-600">No published posts with this tag yet.</p>
         )}
       </main>
-      <Footer siteName={settings.siteName} />
+      <Footer siteName={settings.siteName} socialLinks={settings.socialLinks} />
     </>
   );
 });

@@ -1,2 +1,7 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
+
+/* Class-based dark mode: the .dark class is set on <html> (SSR from the
+   settings theme, or by the ThemeToggle island). The public site has no
+   dark: utilities yet (F17, stage 11). */
+@custom-variant dark (&:where(.dark, .dark *));

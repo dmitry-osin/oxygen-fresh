@@ -45,7 +45,7 @@ export default define.page<typeof handler>(function Home({ data }) {
         {posts.length === 0 && <p class="text-gray-600">No posts yet.</p>}
         <Pagination page={page} totalPages={totalPages} basePath="/" />
       </main>
-      <Footer siteName={settings.siteName} />
+      <Footer siteName={settings.siteName} socialLinks={settings.socialLinks} />
     </>
   );
 });

@@ -3,6 +3,7 @@
 // Source: ai/requirements.md 5.1 (single sidebar navigation).
 
 import { define } from "@/utils.ts";
+import ThemeToggle from "@/islands/ThemeToggle.tsx";
 
 const SECTIONS = [
   { href: "/admin", label: "Dashboard" },
@@ -28,7 +29,9 @@ export default define.layout(function AdminLayout(ctx) {
     <div class="min-h-screen flex bg-gray-50 dark:bg-gray-950 dark:text-gray-100">
       <aside class="w-52 shrink-0 border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 flex flex-col">
         <div class="px-4 py-5 border-b border-gray-200 dark:border-gray-800">
-          <a href="/admin" class="font-bold">oxygen-blog</a>
+          <a href="/admin" class="font-bold">
+            {ctx.state.siteName ?? "oxygen-blog"}
+          </a>
           <p class="text-xs text-gray-500 mt-1">{ctx.state.user?.username}</p>
         </div>
         <nav class="flex-1 px-2 py-4">
@@ -49,7 +52,8 @@ export default define.layout(function AdminLayout(ctx) {
             ))}
           </ul>
         </nav>
-        <div class="px-4 py-4 border-t border-gray-200 dark:border-gray-800">
+        <div class="px-4 py-4 border-t border-gray-200 dark:border-gray-800 space-y-2">
+          <ThemeToggle theme={ctx.state.theme ?? "system"} />
           <form method="post" action="/admin/logout">
             <button
               type="submit"
