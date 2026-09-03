@@ -7,8 +7,8 @@
 
 import { kv, KvKeys } from "./kv.ts";
 import { saveMenuItems } from "./menu.ts";
-import { invalidatePageSummaryCache } from "./pages.ts";
-import { invalidatePostSummaryCache } from "./posts.ts";
+import { invalidatePageSummaryCache, toPageSummary } from "./pages.ts";
+import { invalidatePostSummaryCache, toPostSummary } from "./posts.ts";
 import { DEFAULT_SETTINGS, saveSettings } from "./settings.ts";
 import { normalizeSidebarBlocks } from "./sidebar.ts";
 import { indexPost } from "./search.ts";
@@ -216,9 +216,11 @@ async function applyPosts(posts: Post[]): Promise<void> {
   await wipePrefix(["posts_by_tag"]);
   await wipePrefix(["search_index"]);
   await wipePrefix(["search_words"]);
+  await wipePrefix(["summaries", "post"]);
   const op = kv.atomic();
   for (const post of posts) {
     op.set(postKey(post), post);
+    op.set(KvKeys.postSummary(post.id), toPostSummary(post));
     for (const tag of post.tags) {
       op.set(KvKeys.postsByTag(tag, post.id), post.id);
     }
@@ -233,8 +235,12 @@ async function applyPosts(posts: Post[]): Promise<void> {
 
 async function applyPages(pages: Page[]): Promise<void> {
   await wipePrefix(["pages"]);
+  await wipePrefix(["summaries", "page"]);
   const op = kv.atomic();
-  for (const page of pages) op.set(KvKeys.page(page.slug), page);
+  for (const page of pages) {
+    op.set(KvKeys.page(page.slug), page);
+    op.set(KvKeys.pageSummary(page.id), toPageSummary(page));
+  }
   await op.commit();
   await kv.set(KvKeys.pageIds(), pages.map((page) => page.id));
   invalidatePageSummaryCache();

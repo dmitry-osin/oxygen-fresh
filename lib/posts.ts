@@ -3,6 +3,7 @@
 // Sources: ai/requirements.md F1, schema 6.1.
 
 import { kv, KvKeys } from "./kv.ts";
+import { recordCache } from "./perf.ts";
 import type { Post } from "@/types/index.ts";
 
 /** Fields accepted from the post editor form. */
@@ -26,6 +27,8 @@ export type SaveResult =
 
 export const PUBLISHED_PREFIX = ["posts", "published"];
 export const DRAFT_PREFIX = ["posts", "draft"];
+const POST_SUMMARY_PREFIX = ["summaries", "post"] as const;
+const SUMMARY_WRITE_CHUNK = 100;
 
 /** All published posts, ordered by publishedAt descending. */
 export async function listPublishedPosts(): Promise<Post[]> {
@@ -48,7 +51,7 @@ export async function listDrafts(): Promise<Post[]> {
 /** Fields needed by the admin post table (no Markdown body). */
 export type PostSummary = Omit<Post, "content">;
 
-const SUMMARY_CACHE_TTL_MS = 5_000;
+const SUMMARY_CACHE_TTL_MS = 60_000;
 let summaryCache: { at: number; posts: PostSummary[] } | null = null;
 
 /** Drop the admin list cache after create / publish / delete / edit. */
@@ -56,37 +59,81 @@ export function invalidatePostSummaryCache(): void {
   summaryCache = null;
 }
 
-function toSummary(post: Post): PostSummary {
+export function toPostSummary(post: Post): PostSummary {
   const { content: _content, ...summary } = post;
   return summary;
 }
 
-/** Published + drafts for admin lists — bodies stripped, briefly cached. */
+async function listPostSummariesFromKv(): Promise<PostSummary[]> {
+  const posts: PostSummary[] = [];
+  const iter = kv.list<PostSummary>({ prefix: POST_SUMMARY_PREFIX });
+  for await (const entry of iter) posts.push(entry.value);
+  return posts;
+}
+
+export function queuePostSummary(
+  op: Deno.AtomicOperation,
+  post: Post,
+): Deno.AtomicOperation {
+  return op.set(KvKeys.postSummary(post.id), toPostSummary(post));
+}
+
+/** Backfill summary keys from full posts (legacy DBs / import drift). */
+async function rebuildPostSummaries(): Promise<PostSummary[]> {
+  const existing = kv.list({ prefix: POST_SUMMARY_PREFIX });
+  for await (const entry of existing) await kv.delete(entry.key);
+  const posts = (await listAllPosts()).map(toPostSummary);
+  for (let i = 0; i < posts.length; i += SUMMARY_WRITE_CHUNK) {
+    const chunk = posts.slice(i, i + SUMMARY_WRITE_CHUNK);
+    const op = kv.atomic();
+    for (const summary of chunk) {
+      op.set(KvKeys.postSummary(summary.id), summary);
+    }
+    await op.commit();
+  }
+  return posts;
+}
+
+async function loadPostSummaries(): Promise<PostSummary[]> {
+  const [fromKv, ids] = await Promise.all([
+    listPostSummariesFromKv(),
+    kv.get<string[]>(KvKeys.postIds()),
+  ]);
+  const expected = ids.value?.length ?? 0;
+  if (expected > 0 && fromKv.length !== expected) {
+    return await rebuildPostSummaries();
+  }
+  if (expected === 0 && fromKv.length > 0) {
+    return await rebuildPostSummaries();
+  }
+  return fromKv;
+}
+
+/** Published + drafts for admin lists — reads summary keys only. */
 export async function listAllPostSummaries(): Promise<PostSummary[]> {
   if (summaryCache && Date.now() - summaryCache.at < SUMMARY_CACHE_TTL_MS) {
+    recordCache("post-summaries", true);
     return summaryCache.posts;
   }
-  const posts = (await listAllPosts()).map(toSummary);
+  recordCache("post-summaries", false);
+  const posts = (await loadPostSummaries()).sort((a, b) =>
+    b.updatedAt.localeCompare(a.updatedAt)
+  );
   summaryCache = { posts, at: Date.now() };
   return posts;
 }
 
 /** Published posts without Markdown bodies (menus, pickers, indexes). */
 export async function listPublishedPostSummaries(): Promise<PostSummary[]> {
-  // Reuse the admin summary cache when warm (e.g. after visiting Posts).
-  if (summaryCache && Date.now() - summaryCache.at < SUMMARY_CACHE_TTL_MS) {
-    return summaryCache.posts
-      .filter((post) => post.status === "published")
-      .sort((a, b) =>
-        (b.publishedAt ?? "").localeCompare(a.publishedAt ?? "")
-      );
-  }
-  const posts: PostSummary[] = [];
-  const iter = kv.list<Post>({ prefix: PUBLISHED_PREFIX });
-  for await (const entry of iter) posts.push(toSummary(entry.value));
-  return posts.sort((a, b) =>
-    (b.publishedAt ?? "").localeCompare(a.publishedAt ?? "")
-  );
+  return (await listAllPostSummaries())
+    .filter((post) => post.status === "published")
+    .sort((a, b) =>
+      (b.publishedAt ?? "").localeCompare(a.publishedAt ?? "")
+    );
+}
+
+export async function getPostSummary(id: string): Promise<PostSummary | null> {
+  return (await kv.get<PostSummary>(KvKeys.postSummary(id))).value;
 }
 
 /** id/slug/title only — for selects that must not pull Markdown bodies into HTML. */

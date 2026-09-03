@@ -2,14 +2,15 @@
 // server-rendered SVG chart of the last 7 days.
 // Source: ai/requirements.md 350-356, :471.
 //
-// Uses content-stripped summaries so opening Insights does not pull every
-// Markdown body from KV just to show titles and counts.
+// Counts come from id lists; titles for the top-N only from summary keys —
+// not a full content catalog.
 
 import { Head } from "fresh/runtime";
 import { define } from "@/utils.ts";
+import { kv, KvKeys } from "@/lib/kv.ts";
 import { dailyViews, listViews, type ViewCount } from "@/lib/analytics.ts";
-import { listAllPostSummaries, type PostSummary } from "@/lib/posts.ts";
-import { listPageSummaries, type PageSummary } from "@/lib/pages.ts";
+import { getPostSummary } from "@/lib/posts.ts";
+import { getPageSummary } from "@/lib/pages.ts";
 import { listTags } from "@/lib/tags.ts";
 import { DailyViewsChart } from "@/components/DailyViewsChart.tsx";
 import {
@@ -27,45 +28,63 @@ export interface TopEntry {
   views: number;
 }
 
-/** Join view counters with entity titles; deleted entities are skipped. */
-function topTitles(
+/** Resolve titles for the highest-view entities; skip deleted ids. */
+async function topTitles(
   views: ViewCount[],
-  entities: Pick<PostSummary | PageSummary, "id" | "title">[],
+  getTitle: (id: string) => Promise<string | null>,
   limit: number,
-): TopEntry[] {
-  const titles = new Map(entities.map((entity) => [entity.id, entity.title]));
+): Promise<TopEntry[]> {
   const entries: TopEntry[] = [];
-  for (const count of views) {
-    const title = titles.get(count.id);
-    if (!title) continue;
-    entries.push({ title, views: count.views });
-    if (entries.length >= limit) break;
+  let offset = 0;
+  while (entries.length < limit && offset < views.length) {
+    const need = Math.max(limit - entries.length, 4);
+    const batch = views.slice(offset, offset + need);
+    offset += batch.length;
+    const titles = await Promise.all(batch.map((row) => getTitle(row.id)));
+    for (let i = 0; i < batch.length; i++) {
+      const title = titles[i];
+      if (!title) continue;
+      entries.push({ title, views: batch[i].views });
+      if (entries.length >= limit) break;
+    }
   }
   return entries;
 }
 
 export const handler = define.handlers({
   async GET() {
-    const [posts, pages, tags, postViews, pageViews, daily] = await Promise
+    const [postIds, pageIds, tags, postViews, pageViews, daily] = await Promise
       .all([
-        listAllPostSummaries(),
-        listPageSummaries(),
+        kv.get<string[]>(KvKeys.postIds()),
+        kv.get<string[]>(KvKeys.pageIds()),
         listTags(),
         listViews("post"),
         listViews("page"),
         dailyViews(7),
       ]);
+    const [topPosts, topPages] = await Promise.all([
+      topTitles(
+        postViews,
+        async (id) => (await getPostSummary(id))?.title ?? null,
+        10,
+      ),
+      topTitles(
+        pageViews,
+        async (id) => (await getPageSummary(id))?.title ?? null,
+        10,
+      ),
+    ]);
     return {
       data: {
-        postCount: posts.length,
-        pageCount: pages.length,
+        postCount: postIds.value?.length ?? 0,
+        pageCount: pageIds.value?.length ?? 0,
         tagCount: tags.length,
         totalViews: [...postViews, ...pageViews].reduce(
           (sum, entry) => sum + entry.views,
           0,
         ),
-        topPosts: topTitles(postViews, posts, 10),
-        topPages: topTitles(pageViews, pages, 10),
+        topPosts,
+        topPages,
         daily,
       },
     };

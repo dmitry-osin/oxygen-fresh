@@ -2,6 +2,7 @@
 // Source: ai/requirements.md F2 (section 7.1), schema 6.1.
 
 import { addToList, kv, KvKeys, removeFromList } from "./kv.ts";
+import { recordCache } from "./perf.ts";
 import type { Page } from "@/types/index.ts";
 import { slugify } from "@/utils/slugify.ts";
 import { isValidSlug } from "@/utils/validate.ts";
@@ -24,13 +25,67 @@ export type PageResult =
   | { ok: false; error: string };
 
 const PAGES_PREFIX = ["pages"];
+const PAGE_SUMMARY_PREFIX = ["summaries", "page"] as const;
+const SUMMARY_WRITE_CHUNK = 100;
 
-const SUMMARY_CACHE_TTL_MS = 5_000;
+/** Fields needed by pickers / menus (no Markdown body). */
+export type PageSummary = Omit<Page, "content">;
+
+const SUMMARY_CACHE_TTL_MS = 60_000;
 let pageSummaryCache: { at: number; pages: PageSummary[] } | null = null;
 
 /** Drop the page list cache after create / update / delete. */
 export function invalidatePageSummaryCache(): void {
   pageSummaryCache = null;
+}
+
+export function toPageSummary(page: Page): PageSummary {
+  const { content: _content, ...summary } = page;
+  return summary;
+}
+
+export function queuePageSummary(
+  op: Deno.AtomicOperation,
+  page: Page,
+): Deno.AtomicOperation {
+  return op.set(KvKeys.pageSummary(page.id), toPageSummary(page));
+}
+
+async function listPageSummariesFromKv(): Promise<PageSummary[]> {
+  const pages: PageSummary[] = [];
+  const iter = kv.list<PageSummary>({ prefix: PAGE_SUMMARY_PREFIX });
+  for await (const entry of iter) pages.push(entry.value);
+  return pages;
+}
+
+async function rebuildPageSummaries(): Promise<PageSummary[]> {
+  const existing = kv.list({ prefix: PAGE_SUMMARY_PREFIX });
+  for await (const entry of existing) await kv.delete(entry.key);
+  const pages = (await listPages()).map(toPageSummary);
+  for (let i = 0; i < pages.length; i += SUMMARY_WRITE_CHUNK) {
+    const chunk = pages.slice(i, i + SUMMARY_WRITE_CHUNK);
+    const op = kv.atomic();
+    for (const summary of chunk) {
+      op.set(KvKeys.pageSummary(summary.id), summary);
+    }
+    await op.commit();
+  }
+  return pages;
+}
+
+async function loadPageSummaries(): Promise<PageSummary[]> {
+  const [fromKv, ids] = await Promise.all([
+    listPageSummariesFromKv(),
+    kv.get<string[]>(KvKeys.pageIds()),
+  ]);
+  const expected = ids.value?.length ?? 0;
+  if (expected > 0 && fromKv.length !== expected) {
+    return await rebuildPageSummaries();
+  }
+  if (expected === 0 && fromKv.length > 0) {
+    return await rebuildPageSummaries();
+  }
+  return fromKv;
 }
 
 /** All pages, ordered by slug. */
@@ -41,28 +96,25 @@ export async function listPages(): Promise<Page[]> {
   return pages.sort((a, b) => a.slug.localeCompare(b.slug));
 }
 
-/** Fields needed by pickers / menus (no Markdown body). */
-export type PageSummary = Omit<Page, "content">;
-
-function toPageSummary(page: Page): PageSummary {
-  const { content: _content, ...summary } = page;
-  return summary;
-}
-
-/** All pages without Markdown bodies. */
+/** All pages without Markdown bodies (summary keys only). */
 export async function listPageSummaries(): Promise<PageSummary[]> {
   if (
     pageSummaryCache &&
     Date.now() - pageSummaryCache.at < SUMMARY_CACHE_TTL_MS
   ) {
+    recordCache("page-summaries", true);
     return pageSummaryCache.pages;
   }
-  const pages: PageSummary[] = [];
-  const iter = kv.list<Page>({ prefix: PAGES_PREFIX });
-  for await (const entry of iter) pages.push(toPageSummary(entry.value));
-  pages.sort((a, b) => a.slug.localeCompare(b.slug));
+  recordCache("page-summaries", false);
+  const pages = (await loadPageSummaries()).sort((a, b) =>
+    a.slug.localeCompare(b.slug)
+  );
   pageSummaryCache = { pages, at: Date.now() };
   return pages;
+}
+
+export async function getPageSummary(id: string): Promise<PageSummary | null> {
+  return (await kv.get<PageSummary>(KvKeys.pageSummary(id))).value;
 }
 
 /** id/slug/title only — for admin selects. */
@@ -122,7 +174,8 @@ export async function createPage(input: PageInput): Promise<PageResult> {
     createdAt: now,
     updatedAt: now,
   };
-  await kv.set(KvKeys.page(page.slug), page);
+  await queuePageSummary(kv.atomic().set(KvKeys.page(page.slug), page), page)
+    .commit();
   await addToList(KvKeys.pageIds(), page.id);
   invalidatePageSummaryCache();
   return { ok: true, page };
@@ -153,7 +206,10 @@ export async function updatePage(
     metaDescription: input.metaDescription?.trim() || undefined,
     updatedAt: nowIso(),
   };
-  const op = kv.atomic().set(KvKeys.page(slug), updated);
+  const op = queuePageSummary(
+    kv.atomic().set(KvKeys.page(slug), updated),
+    updated,
+  );
   if (slug !== page.slug) op.delete(KvKeys.page(page.slug));
   await op.commit();
   invalidatePageSummaryCache();
@@ -163,7 +219,10 @@ export async function updatePage(
 export async function deletePage(id: string): Promise<boolean> {
   const page = await getPageById(id);
   if (!page) return false;
-  await kv.delete(KvKeys.page(page.slug));
+  await kv.atomic()
+    .delete(KvKeys.page(page.slug))
+    .delete(KvKeys.pageSummary(id))
+    .commit();
   await removeFromList(KvKeys.pageIds(), id);
   invalidatePageSummaryCache();
   return true;

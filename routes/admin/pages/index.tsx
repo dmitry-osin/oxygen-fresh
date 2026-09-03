@@ -4,7 +4,7 @@
 import { Head } from "fresh/runtime";
 import { HttpError } from "fresh";
 import { define } from "@/utils.ts";
-import { createPage, deletePage, listPages } from "@/lib/pages.ts";
+import { createPage, deletePage, listPageSummaries } from "@/lib/pages.ts";
 import { formatDateTime } from "@/utils/date.ts";
 import { ConfirmDeleteTrigger } from "@/components/ConfirmDeleteTrigger.tsx";
 import {
@@ -29,7 +29,7 @@ import {
 
 export const handler = define.handlers({
   async GET() {
-    const pages = (await listPages()).sort(
+    const pages = (await listPageSummaries()).sort(
       (a, b) => a.menuOrder - b.menuOrder || a.title.localeCompare(b.title),
     );
     return { data: { pages } };

@@ -8,6 +8,7 @@ import {
   invalidatePostSummaryCache,
   isSlugTaken,
   type PostInput,
+  queuePostSummary,
   type SaveResult,
   uniqueSlug,
 } from "./posts.ts";
@@ -52,6 +53,7 @@ async function commitPost(post: Post, previous?: Post): Promise<void> {
     op.delete(KvKeys.draftPost(post.id));
   }
   op.set(postKey(post), post);
+  queuePostSummary(op, post);
   syncTagIndex(op, post, previous);
   await op.commit();
   invalidatePostSummaryCache();
@@ -192,6 +194,7 @@ export async function deletePost(id: string): Promise<boolean> {
   const op = kv.atomic().delete(postKey(post));
   syncTagIndex(op, { ...post, tags: [] }, post);
   op.delete(KvKeys.postVersionMeta(post.id));
+  op.delete(KvKeys.postSummary(post.id));
   await op.commit();
   invalidatePostSummaryCache();
   await removeFromList(KvKeys.postIds(), id);

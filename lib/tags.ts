@@ -6,8 +6,10 @@ import type { Post, Tag } from "@/types/index.ts";
 import {
   DRAFT_PREFIX,
   getPostById,
+  invalidatePostSummaryCache,
   listPublishedPosts,
   PUBLISHED_PREFIX,
+  toPostSummary,
 } from "./posts.ts";
 import { slugify } from "@/utils/slugify.ts";
 import { isValidSlug } from "@/utils/validate.ts";
@@ -139,14 +141,17 @@ export async function deleteTag(slug: string): Promise<boolean> {
 
   const op = kv.atomic().delete(KvKeys.tag(slug));
   for (const { post, key } of affected) {
-    op.set(key, {
+    const updated = {
       ...post,
       tags: post.tags.filter((t) => t !== slug),
       updatedAt: nowIso(),
-    });
+    };
+    op.set(key, updated);
+    op.set(KvKeys.postSummary(post.id), toPostSummary(updated));
     op.delete(KvKeys.postsByTag(slug, post.id));
   }
   await op.commit();
+  invalidatePostSummaryCache();
   await removeFromList(KvKeys.tagIds(), slug);
   return true;
 }

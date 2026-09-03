@@ -16,10 +16,13 @@ export const KvKeys = {
   postsByTag: (tagSlug: string, postId: string) =>
     ["posts_by_tag", tagSlug, postId] as const,
   postIds: () => ["post_ids"] as const,
+  /** Metadata without Markdown — admin lists / pickers / analytics. */
+  postSummary: (id: string) => ["summaries", "post", id] as const,
 
   // Pages
   page: (slug: string) => ["pages", slug] as const,
   pageIds: () => ["page_ids"] as const,
+  pageSummary: (id: string) => ["summaries", "page", id] as const,
 
   // Tags
   tag: (slug: string) => ["tags", slug] as const,
