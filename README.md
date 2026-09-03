@@ -57,7 +57,8 @@ Useful tasks: `deno task check` (fmt + lint + type check), `deno task build`,
 ## Production
 
 Single Docker container behind Nginx; KV and uploads as volumes; first-boot env
-seed; health check on `GET /`. Build/run, env table, backups and TLS:
+seed; health check on `GET /`. CI builds the image and pushes to GHCR on `main`
+(`ghcr.io/<owner>/<repo>`). Build/run, env table, backups and TLS:
 
 [docs/deployment.md](docs/deployment.md)
 

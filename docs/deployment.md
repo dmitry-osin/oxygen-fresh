@@ -6,6 +6,23 @@ SQLite file, user uploads on a volume, Nginx with TLS in front. No Deno Deploy
 
 ## 1. Build and run the container
 
+CI (`.github/workflows/docker.yml`) builds the image on every PR and pushes to
+GitHub Container Registry on pushes to `main` and tags `v*`:
+
+```text
+ghcr.io/<owner>/<repo>:latest
+ghcr.io/<owner>/<repo>:sha-<short-sha>
+ghcr.io/<owner>/<repo>:1.2.3   # from tag v1.2.3
+```
+
+Pull (package must be public, or authenticate with a PAT / `GITHUB_TOKEN`):
+
+```sh
+docker pull ghcr.io/dmitry-osin/oxygen-fresh:latest
+```
+
+Or build locally:
+
 ```sh
 docker build -t oxygen-blog .
 docker run -d --name oxygen-blog \
