@@ -16,6 +16,10 @@ export const DEFAULT_SETTINGS: Settings = {
   giscusEnabled: false,
   giscusMapping: "pathname",
   giscusLang: "ru",
+  contactFormEnabled: false,
+  contactFormLabel: "Contact",
+  contactFormMenuOrder: 99,
+  contactCaptchaEnabled: true,
 };
 
 /** True when Giscus is on and all required IDs from giscus.app are set. */

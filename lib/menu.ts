@@ -4,6 +4,7 @@
 
 import { kv, KvKeys } from "./kv.ts";
 import { listPages } from "./pages.ts";
+import { getSettings } from "./settings.ts";
 import { recordCache } from "./perf.ts";
 import type { MenuItem } from "@/types/index.ts";
 
@@ -88,15 +89,36 @@ function toNavLink(item: MenuItem): NavLink {
 /**
  * Navigation links for the public header. Falls back to pages with
  * showInMenu=true (ordered by menuOrder) while the menu builder is empty.
+ * When the contact form is enabled in settings, a /contact link is inserted
+ * at contactFormMenuOrder (0 = first).
  */
 export async function getNavLinks(): Promise<NavLink[]> {
-  const items = await getMenuItems();
+  const [items, settings] = await Promise.all([
+    getMenuItems(),
+    getSettings(),
+  ]);
+  let links: NavLink[];
   if (items.length > 0) {
-    return [...items].sort((a, b) => a.order - b.order).map(toNavLink);
+    links = [...items].sort((a, b) => a.order - b.order).map(toNavLink);
+  } else {
+    const pages = await listPages();
+    links = pages
+      .filter((p) => p.showInMenu)
+      .sort((a, b) => a.menuOrder - b.menuOrder)
+      .map((p) => ({ label: p.title, href: `/page/${p.slug}` }));
   }
-  const pages = await listPages();
-  return pages
-    .filter((p) => p.showInMenu)
-    .sort((a, b) => a.menuOrder - b.menuOrder)
-    .map((p) => ({ label: p.title, href: `/page/${p.slug}` }));
+
+  if (settings.contactFormEnabled) {
+    const contact: NavLink = {
+      label: settings.contactFormLabel || "Contact",
+      href: "/contact",
+    };
+    const index = Math.max(
+      0,
+      Math.min(settings.contactFormMenuOrder ?? 99, links.length),
+    );
+    links = [...links.slice(0, index), contact, ...links.slice(index)];
+  }
+
+  return links;
 }

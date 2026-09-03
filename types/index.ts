@@ -109,6 +109,26 @@ export interface Settings {
   giscusMapping?: "pathname" | "url" | "title";
   /** UI language for the widget (default ru). */
   giscusLang?: string;
+  /** Public contact form at /contact + menu link. */
+  contactFormEnabled: boolean;
+  /** Label in the public header menu. */
+  contactFormLabel: string;
+  /** 0-based position among nav links (0 = first). */
+  contactFormMenuOrder: number;
+  /** Optional intro text above the form. */
+  contactFormIntro?: string;
+  /** Math captcha on the public contact form (default on). */
+  contactCaptchaEnabled: boolean;
+}
+
+export interface ContactMessage {
+  id: string;
+  name: string;
+  email: string;
+  subject?: string;
+  message: string;
+  createdAt: string;
+  read: boolean;
 }
 
 export interface User {

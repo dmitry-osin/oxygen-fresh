@@ -55,6 +55,13 @@ export const KvKeys = {
   // Users / Auth
   user: (username: string) => ["users", username] as const,
   session: (token: string) => ["sessions", token] as const,
+
+  // Contact form inbox
+  contactMessage: (id: string) => ["contact_messages", id] as const,
+  contactMessageIds: () => ["contact_message_ids"] as const,
+
+  // One-time math captcha answers (TTL set on write)
+  captcha: (token: string) => ["captcha", token] as const,
 };
 
 /** Atomically increment a numeric counter key. Returns the new value. */

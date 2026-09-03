@@ -15,6 +15,7 @@ import {
   LayoutDashboard,
   ListTree,
   LogOut,
+  Mail,
   Settings,
   Tags,
   UserRound,
@@ -59,6 +60,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: "System",
     items: [
+      { href: "/admin/messages", label: "Messages", icon: Mail },
       { href: "/admin/redirects", label: "Redirects", icon: ArrowRightLeft },
       { href: "/admin/export-import", label: "Backup", icon: Archive },
     ],

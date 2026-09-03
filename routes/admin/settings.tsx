@@ -1,4 +1,4 @@
-// Site settings page (F12): single form over the ["settings"] KV key.
+// Site settings page (F12): tabbed form over the ["settings"] KV key.
 // Logo/favicon go through the media library upload validation.
 // Source: ai/requirements.md 339-345, :470.
 
@@ -8,6 +8,7 @@ import { getSettings, saveSettings } from "@/lib/settings.ts";
 import { saveMediaFile } from "@/lib/media.ts";
 import { SocialLinksFields } from "@/components/SocialLinksFields.tsx";
 import FilePickField from "@/islands/FilePickField.tsx";
+import SettingsTabs from "@/islands/SettingsTabs.tsx";
 import type { Settings } from "@/types/index.ts";
 import {
   ADMIN_BTN_PRIMARY,
@@ -20,16 +21,26 @@ import {
   AdminPage,
 } from "@/components/AdminPage.tsx";
 
-interface SettingsData {
-  settings: Settings;
-  error: string | null;
-  saved: boolean;
-}
-
 const INPUT = ADMIN_INPUT;
 const LABEL = ADMIN_TYPE_LABEL;
 const ACCEPT_IMAGES = "image/png,image/jpeg,image/webp,image/gif,image/svg+xml";
 const THEMES: Settings["theme"][] = ["light", "dark", "system"];
+
+const SETTINGS_TABS = [
+  { id: "general", label: "General" },
+  { id: "seo", label: "SEO & social" },
+  { id: "comments", label: "Comments" },
+  { id: "contact", label: "Contact" },
+] as const;
+
+type SettingsTabId = typeof SETTINGS_TABS[number]["id"];
+
+function parseTab(raw: string | null): SettingsTabId {
+  const id = raw ?? "general";
+  return SETTINGS_TABS.some((t) => t.id === id)
+    ? id as SettingsTabId
+    : "general";
+}
 
 function parseSocialLinks(
   form: FormData,
@@ -148,6 +159,34 @@ function parseGiscus(
   };
 }
 
+function parseContactForm(
+  form: FormData,
+):
+  | Pick<
+    Settings,
+    | "contactFormEnabled"
+    | "contactFormLabel"
+    | "contactFormMenuOrder"
+    | "contactFormIntro"
+    | "contactCaptchaEnabled"
+  >
+  | string {
+  const enabled = form.get("contactFormEnabled") === "on";
+  const label = String(form.get("contactFormLabel") ?? "").trim() || "Contact";
+  const orderRaw = Number(form.get("contactFormMenuOrder"));
+  if (!Number.isInteger(orderRaw) || orderRaw < 0 || orderRaw > 100) {
+    return "Contact menu order must be a whole number from 0 to 100.";
+  }
+  const intro = String(form.get("contactFormIntro") ?? "").trim() || undefined;
+  return {
+    contactFormEnabled: enabled,
+    contactFormLabel: label,
+    contactFormMenuOrder: orderRaw,
+    contactFormIntro: intro,
+    contactCaptchaEnabled: form.get("contactCaptchaEnabled") === "on",
+  };
+}
+
 async function parseSettingsForm(
   form: FormData,
   current: Settings,
@@ -170,6 +209,10 @@ async function parseSettingsForm(
   if (typeof giscus === "string") {
     return { ok: false, error: giscus };
   }
+  const contact = parseContactForm(form);
+  if (typeof contact === "string") {
+    return { ok: false, error: contact };
+  }
   const uploads = await resolveUploads(form, current);
   if (!uploads.ok) return { ok: false, error: uploads.error };
   const text = (name: string) =>
@@ -188,6 +231,7 @@ async function parseSettingsForm(
       theme: theme as Settings["theme"],
       postsPerPage,
       ...giscus,
+      ...contact,
     },
   };
 }
@@ -199,28 +243,37 @@ export const handler = define.handlers({
         settings: await getSettings(),
         error: null,
         saved: ctx.url.searchParams.get("saved") === "1",
+        tab: parseTab(ctx.url.searchParams.get("tab")),
       },
     };
   },
 
   async POST(ctx) {
     const form = await ctx.req.formData();
+    const tab = parseTab(String(form.get("settingsTab") ?? "general"));
     const current = await getSettings();
     const parsed = await parseSettingsForm(form, current);
     if (!parsed.ok) {
-      return { data: { settings: current, error: parsed.error, saved: false } };
+      return {
+        data: {
+          settings: current,
+          error: parsed.error,
+          saved: false,
+          tab,
+        },
+      };
     }
     await saveSettings(parsed.settings);
-    return ctx.redirect("/admin/settings?saved=1");
+    return ctx.redirect(`/admin/settings?saved=1&tab=${tab}`);
   },
 });
 
 export default define.page<typeof handler>(function SettingsPage({ data }) {
-  const { settings, error, saved } = data;
+  const { settings, error, saved, tab } = data;
   return (
     <AdminPage
       title="Settings"
-      description="Site identity, footer, SEO, social links, pagination and comments."
+      description="Site identity, SEO, comments and contact form."
     >
       <Head>
         <title>Settings - Admin</title>
@@ -232,103 +285,124 @@ export default define.page<typeof handler>(function SettingsPage({ data }) {
         enctype="multipart/form-data"
         class="space-y-5"
       >
-        <label class="block">
-          <span class={LABEL}>Site name *</span>
-          <input
-            name="siteName"
-            required
-            value={settings.siteName}
-            class={INPUT}
-          />
-        </label>
-        <label class="block">
-          <span class={LABEL}>Site description</span>
-          <textarea
-            name="siteDescription"
-            rows={2}
-            class={INPUT}
-          >
-            {settings.siteDescription}
-          </textarea>
-        </label>
-        <label class="block">
-          <span class={LABEL}>Footer description</span>
-          <textarea
-            name="footerDescription"
-            rows={2}
-            class={INPUT}
-            placeholder="Short line shown under the copyright in the public footer"
-          >
-            {settings.footerDescription}
-          </textarea>
-        </label>
-        <div class="grid gap-4 sm:grid-cols-2">
-          <div>
-            <span class={LABEL}>Logo</span>
-            <FilePickField
-              name="logo"
-              accept={ACCEPT_IMAGES}
-              buttonLabel="Choose logo"
-              hint="PNG, JPG, WebP, GIF or SVG"
-              imagePreview
-              currentImageUrl={settings.logoUrl}
-            />
-          </div>
-          <div>
-            <span class={LABEL}>Favicon (PNG recommended)</span>
-            <FilePickField
-              name="favicon"
-              accept={ACCEPT_IMAGES}
-              buttonLabel="Choose favicon"
-              hint="PNG, JPG, WebP, GIF or SVG"
-              imagePreview
-              currentImageUrl={settings.faviconUrl}
-            />
-          </div>
-        </div>
-        <label class="block">
-          <span class={LABEL}>Default meta title</span>
-          <input
-            name="defaultMetaTitle"
-            value={settings.defaultMetaTitle ?? ""}
-            class={INPUT}
-          />
-        </label>
-        <label class="block">
-          <span class={LABEL}>Default meta description</span>
-          <input
-            name="defaultMetaDescription"
-            value={settings.defaultMetaDescription ?? ""}
-            class={INPUT}
-          />
-        </label>
-        <SocialLinksFields links={settings.socialLinks} />
-        <div class="grid gap-4 sm:grid-cols-2 max-w-xl">
+        <input type="hidden" name="settingsTab" value={tab} />
+        <SettingsTabs
+          tabs={[...SETTINGS_TABS]}
+          initialTab={tab}
+        />
+
+        <div
+          data-settings-panel="general"
+          class="space-y-5"
+          hidden={tab !== "general"}
+        >
           <label class="block">
-            <span class={LABEL}>Theme</span>
-            <select name="theme" class={INPUT}>
-              {THEMES.map((theme) => (
-                <option value={theme} selected={settings.theme === theme}>
-                  {theme}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label class="block">
-            <span class={LABEL}>Posts per page</span>
+            <span class={LABEL}>Site name *</span>
             <input
-              name="postsPerPage"
-              type="number"
-              min={1}
-              max={100}
-              value={settings.postsPerPage}
+              name="siteName"
+              value={settings.siteName}
               class={INPUT}
             />
           </label>
+          <label class="block">
+            <span class={LABEL}>Site description</span>
+            <textarea
+              name="siteDescription"
+              rows={2}
+              class={INPUT}
+            >
+              {settings.siteDescription}
+            </textarea>
+          </label>
+          <label class="block">
+            <span class={LABEL}>Footer description</span>
+            <textarea
+              name="footerDescription"
+              rows={2}
+              class={INPUT}
+              placeholder="Short line shown under the copyright in the public footer"
+            >
+              {settings.footerDescription}
+            </textarea>
+          </label>
+          <div class="grid gap-4 sm:grid-cols-2">
+            <div>
+              <span class={LABEL}>Logo</span>
+              <FilePickField
+                name="logo"
+                accept={ACCEPT_IMAGES}
+                buttonLabel="Choose logo"
+                hint="PNG, JPG, WebP, GIF or SVG"
+                imagePreview
+                currentImageUrl={settings.logoUrl}
+              />
+            </div>
+            <div>
+              <span class={LABEL}>Favicon (PNG recommended)</span>
+              <FilePickField
+                name="favicon"
+                accept={ACCEPT_IMAGES}
+                buttonLabel="Choose favicon"
+                hint="PNG, JPG, WebP, GIF or SVG"
+                imagePreview
+                currentImageUrl={settings.faviconUrl}
+              />
+            </div>
+          </div>
+          <div class="grid gap-4 sm:grid-cols-2 max-w-xl">
+            <label class="block">
+              <span class={LABEL}>Theme</span>
+              <select name="theme" class={INPUT}>
+                {THEMES.map((theme) => (
+                  <option value={theme} selected={settings.theme === theme}>
+                    {theme}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label class="block">
+              <span class={LABEL}>Posts per page</span>
+              <input
+                name="postsPerPage"
+                type="number"
+                min={1}
+                max={100}
+                value={settings.postsPerPage}
+                class={INPUT}
+              />
+            </label>
+          </div>
         </div>
 
-        <fieldset class="border border-gray-200 dark:border-gray-800 rounded-lg p-4 space-y-4">
-          <legend class="px-1 text-sm font-semibold">Comments (Giscus)</legend>
+        <div
+          data-settings-panel="seo"
+          class="space-y-5"
+          hidden={tab !== "seo"}
+        >
+          <label class="block">
+            <span class={LABEL}>Default meta title</span>
+            <input
+              name="defaultMetaTitle"
+              value={settings.defaultMetaTitle ?? ""}
+              class={INPUT}
+            />
+          </label>
+          <label class="block">
+            <span class={LABEL}>Default meta description</span>
+            <input
+              name="defaultMetaDescription"
+              value={settings.defaultMetaDescription ?? ""}
+              class={INPUT}
+            />
+          </label>
+          <SocialLinksFields links={settings.socialLinks} />
+        </div>
+
+        <div
+          data-settings-panel="comments"
+          class="space-y-4"
+          hidden={tab !== "comments"}
+        >
           <p class={ADMIN_TYPE_MUTED}>
             GitHub Discussions under each post. Create a repo, enable
             Discussions, install the Giscus app, then copy IDs from{" "}
@@ -411,7 +485,68 @@ export default define.page<typeof handler>(function SettingsPage({ data }) {
               />
             </label>
           </div>
-        </fieldset>
+        </div>
+
+        <div
+          data-settings-panel="contact"
+          class="space-y-4"
+          hidden={tab !== "contact"}
+        >
+          <p class={ADMIN_TYPE_MUTED}>
+            Adds a public form at <code class="text-xs">/contact</code>{" "}
+            and a link in the site menu. Messages appear under Messages in the
+            admin sidebar.
+          </p>
+          <label class={ADMIN_TYPE_INLINE_LABEL}>
+            <input
+              type="checkbox"
+              name="contactFormEnabled"
+              checked={settings.contactFormEnabled}
+            />
+            Enable contact form
+          </label>
+          <label class={ADMIN_TYPE_INLINE_LABEL}>
+            <input
+              type="checkbox"
+              name="contactCaptchaEnabled"
+              checked={settings.contactCaptchaEnabled}
+            />
+            Require math captcha (blocks simple bots)
+          </label>
+          <div class="grid gap-4 sm:grid-cols-2">
+            <label class="block">
+              <span class={LABEL}>Menu label</span>
+              <input
+                name="contactFormLabel"
+                value={settings.contactFormLabel}
+                placeholder="Contact"
+                class={INPUT}
+              />
+            </label>
+            <label class="block">
+              <span class={LABEL}>Menu order (0 = first)</span>
+              <input
+                name="contactFormMenuOrder"
+                type="number"
+                min={0}
+                max={100}
+                value={settings.contactFormMenuOrder}
+                class={INPUT}
+              />
+            </label>
+            <label class="block sm:col-span-2">
+              <span class={LABEL}>Intro text</span>
+              <textarea
+                name="contactFormIntro"
+                rows={2}
+                class={INPUT}
+                placeholder="Optional text above the form"
+              >
+                {settings.contactFormIntro ?? ""}
+              </textarea>
+            </label>
+          </div>
+        </div>
 
         <button type="submit" class={ADMIN_BTN_PRIMARY}>
           Save settings
