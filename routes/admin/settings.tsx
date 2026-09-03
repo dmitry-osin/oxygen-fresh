@@ -13,7 +13,9 @@ import {
   ADMIN_BTN_PRIMARY,
   ADMIN_INPUT,
   ADMIN_TYPE_ERROR,
+  ADMIN_TYPE_INLINE_LABEL,
   ADMIN_TYPE_LABEL,
+  ADMIN_TYPE_MUTED,
   ADMIN_TYPE_SUCCESS,
   AdminPage,
 } from "@/components/AdminPage.tsx";
@@ -91,6 +93,61 @@ function parsePagination(form: FormData): number | string {
   return postsPerPage;
 }
 
+const GISCUS_MAPPINGS: NonNullable<Settings["giscusMapping"]>[] = [
+  "pathname",
+  "url",
+  "title",
+];
+
+function parseGiscus(
+  form: FormData,
+):
+  | Pick<
+    Settings,
+    | "giscusEnabled"
+    | "giscusRepo"
+    | "giscusRepoId"
+    | "giscusCategory"
+    | "giscusCategoryId"
+    | "giscusMapping"
+    | "giscusLang"
+  >
+  | string {
+  const enabled = form.get("giscusEnabled") === "on";
+  const text = (name: string) =>
+    String(form.get(name) ?? "").trim() || undefined;
+  const repo = text("giscusRepo");
+  const repoId = text("giscusRepoId");
+  const category = text("giscusCategory");
+  const categoryId = text("giscusCategoryId");
+  const mappingRaw = String(form.get("giscusMapping") ?? "pathname");
+  const mapping = GISCUS_MAPPINGS.includes(
+      mappingRaw as Settings["giscusMapping"] & string,
+    )
+    ? mappingRaw as Settings["giscusMapping"]
+    : "pathname";
+  const lang = text("giscusLang") ?? "ru";
+
+  if (enabled) {
+    if (!repo?.includes("/")) {
+      return "Giscus repo must look like owner/repo.";
+    }
+    if (!repoId || !category || !categoryId) {
+      return "Giscus needs repo id, category and category id from giscus.app.";
+    }
+  }
+
+  return {
+    giscusEnabled: enabled,
+    giscusRepo: repo,
+    giscusRepoId: repoId,
+    giscusCategory: category,
+    giscusCategoryId: categoryId,
+    giscusMapping: mapping,
+    giscusLang: lang,
+  };
+}
+
 async function parseSettingsForm(
   form: FormData,
   current: Settings,
@@ -109,6 +166,10 @@ async function parseSettingsForm(
   if (typeof socialLinks === "string") {
     return { ok: false, error: socialLinks };
   }
+  const giscus = parseGiscus(form);
+  if (typeof giscus === "string") {
+    return { ok: false, error: giscus };
+  }
   const uploads = await resolveUploads(form, current);
   if (!uploads.ok) return { ok: false, error: uploads.error };
   const text = (name: string) =>
@@ -126,6 +187,7 @@ async function parseSettingsForm(
       socialLinks,
       theme: theme as Settings["theme"],
       postsPerPage,
+      ...giscus,
     },
   };
 }
@@ -158,7 +220,7 @@ export default define.page<typeof handler>(function SettingsPage({ data }) {
   return (
     <AdminPage
       title="Settings"
-      description="Site identity, footer text, SEO defaults, social links and pagination."
+      description="Site identity, footer, SEO, social links, pagination and comments."
     >
       <Head>
         <title>Settings - Admin</title>
@@ -264,6 +326,93 @@ export default define.page<typeof handler>(function SettingsPage({ data }) {
             />
           </label>
         </div>
+
+        <fieldset class="border border-gray-200 dark:border-gray-800 rounded-lg p-4 space-y-4">
+          <legend class="px-1 text-sm font-semibold">Comments (Giscus)</legend>
+          <p class={ADMIN_TYPE_MUTED}>
+            GitHub Discussions under each post. Create a repo, enable
+            Discussions, install the Giscus app, then copy IDs from{" "}
+            <a
+              href="https://giscus.app"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="underline"
+            >
+              giscus.app
+            </a>
+            .
+          </p>
+          <label class={ADMIN_TYPE_INLINE_LABEL}>
+            <input
+              type="checkbox"
+              name="giscusEnabled"
+              checked={settings.giscusEnabled}
+            />
+            Enable comments on posts
+          </label>
+          <div class="grid gap-4 sm:grid-cols-2">
+            <label class="block sm:col-span-2">
+              <span class={LABEL}>Repository (owner/repo)</span>
+              <input
+                name="giscusRepo"
+                value={settings.giscusRepo ?? ""}
+                placeholder="you/your-blog-comments"
+                class={INPUT}
+              />
+            </label>
+            <label class="block">
+              <span class={LABEL}>Repository ID</span>
+              <input
+                name="giscusRepoId"
+                value={settings.giscusRepoId ?? ""}
+                placeholder="R_kgDO…"
+                class={INPUT}
+              />
+            </label>
+            <label class="block">
+              <span class={LABEL}>Category</span>
+              <input
+                name="giscusCategory"
+                value={settings.giscusCategory ?? ""}
+                placeholder="Announcements"
+                class={INPUT}
+              />
+            </label>
+            <label class="block">
+              <span class={LABEL}>Category ID</span>
+              <input
+                name="giscusCategoryId"
+                value={settings.giscusCategoryId ?? ""}
+                placeholder="DIC_kwDO…"
+                class={INPUT}
+              />
+            </label>
+            <label class="block">
+              <span class={LABEL}>Mapping</span>
+              <select name="giscusMapping" class={INPUT}>
+                {GISCUS_MAPPINGS.map((mapping) => (
+                  <option
+                    value={mapping}
+                    selected={(settings.giscusMapping ?? "pathname") ===
+                      mapping}
+                  >
+                    {mapping}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label class="block">
+              <span class={LABEL}>Widget language</span>
+              <input
+                name="giscusLang"
+                value={settings.giscusLang ?? "ru"}
+                placeholder="ru"
+                class={INPUT}
+              />
+            </label>
+          </div>
+        </fieldset>
+
         <button type="submit" class={ADMIN_BTN_PRIMARY}>
           Save settings
         </button>

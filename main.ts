@@ -33,11 +33,12 @@ app.use(async (ctx) => {
 app.use(csp({
   useNonce: true,
   csp: [
-    "script-src 'self' 'unsafe-inline'",
+    "script-src 'self' 'unsafe-inline' https://giscus.app",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
-    "img-src 'self' data:",
-    "connect-src 'self' ws:",
+    "img-src 'self' data: https:",
+    "frame-src https://giscus.app",
+    "connect-src 'self' ws: https://giscus.app",
   ],
 }));
 

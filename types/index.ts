@@ -98,6 +98,17 @@ export interface Settings {
   theme: "light" | "dark" | "system";
   /** Pagination size for blog index */
   postsPerPage: number;
+  /** Giscus comments on post pages (GitHub Discussions). */
+  giscusEnabled: boolean;
+  /** owner/repo */
+  giscusRepo?: string;
+  giscusRepoId?: string;
+  giscusCategory?: string;
+  giscusCategoryId?: string;
+  /** How pages map to Discussions (default pathname). */
+  giscusMapping?: "pathname" | "url" | "title";
+  /** UI language for the widget (default ru). */
+  giscusLang?: string;
 }
 
 export interface User {

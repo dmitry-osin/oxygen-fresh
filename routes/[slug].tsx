@@ -12,7 +12,7 @@ import {
 import { listTagsWithCounts } from "@/lib/tags.ts";
 import { trackView } from "@/lib/analytics.ts";
 import { getNavLinks } from "@/lib/menu.ts";
-import { getSettings } from "@/lib/settings.ts";
+import { getSettings, isGiscusConfigured } from "@/lib/settings.ts";
 import { getAuthor } from "@/lib/users.ts";
 import { renderMarkdownWithToc } from "@/lib/markdown.ts";
 import { canonicalUrl, postJsonLd } from "@/lib/seo.ts";
@@ -23,6 +23,7 @@ import { SeoMeta } from "@/components/SeoMeta.tsx";
 import { JsonLd } from "@/components/JsonLd.tsx";
 import { TagBadge } from "@/components/TagBadge.tsx";
 import { AuthorByline } from "@/components/AuthorByline.tsx";
+import GiscusComments from "@/islands/GiscusComments.tsx";
 import {
   PUBLIC_LINK_UNDERLINE,
   PUBLIC_MAIN_PY,
@@ -101,7 +102,17 @@ export default define.page<typeof handler>(function PostPage({ data }) {
           })}
         </p>
       )}
-      <AuthorByline author={author} />
+      {post.template === "full-width" && <AuthorByline author={author} />}
+      {isGiscusConfigured(settings) && (
+        <GiscusComments
+          repo={settings.giscusRepo!}
+          repoId={settings.giscusRepoId!}
+          category={settings.giscusCategory!}
+          categoryId={settings.giscusCategoryId!}
+          mapping={settings.giscusMapping}
+          lang={settings.giscusLang}
+        />
+      )}
       {related.length > 0 && (
         <section class="mt-12 not-prose">
           <h2 class={`${PUBLIC_TYPE_SECTION} mb-4`}>Related posts</h2>
@@ -152,7 +163,12 @@ export default define.page<typeof handler>(function PostPage({ data }) {
               class={`flex-1 ${PUBLIC_SHELL} ${PUBLIC_MAIN_PY} flex flex-col lg:flex-row gap-10 lg:gap-12`}
             >
               <div class="flex-1 min-w-0">{article}</div>
-              <Sidebar recentPosts={recentPosts} tags={tags} toc={toc} />
+              <Sidebar
+                recentPosts={recentPosts}
+                tags={tags}
+                toc={toc}
+                author={author}
+              />
             </main>
           )}
       </PublicLayout>

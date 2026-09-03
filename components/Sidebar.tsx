@@ -1,6 +1,6 @@
-// Sidebar for the "default" template (F7): TOC, recent posts, tag cloud.
+// Sidebar for the "default" template (F7): author, TOC, recent posts, tags.
 
-import type { Post } from "@/types/index.ts";
+import type { AuthorProfile, Post } from "@/types/index.ts";
 import type { TocEntry } from "@/lib/markdown.ts";
 import type { TagWithCount } from "@/lib/tags.ts";
 import {
@@ -10,6 +10,7 @@ import {
   PUBLIC_TYPE_META,
   PUBLIC_TYPE_SECTION,
 } from "@/lib/public-ui.ts";
+import { AuthorCard } from "./AuthorCard.tsx";
 
 /** Map tag frequency to a font-size class (popular → larger). */
 function tagCloudClass(count: number, min: number, max: number): string {
@@ -23,10 +24,11 @@ function tagCloudClass(count: number, min: number, max: number): string {
 }
 
 export function Sidebar(
-  { recentPosts, tags, toc = [] }: {
+  { recentPosts, tags, toc = [], author }: {
     recentPosts: Post[];
     tags: TagWithCount[];
     toc?: TocEntry[];
+    author?: AuthorProfile;
   },
 ) {
   const counts = tags.map((t) => t.count);
@@ -35,6 +37,11 @@ export function Sidebar(
 
   return (
     <aside class={PUBLIC_ASIDE}>
+      {author && (
+        <div class="lg:sticky lg:top-24">
+          <AuthorCard author={author} />
+        </div>
+      )}
       {toc.length > 0 && (
         <section>
           <h3 class={`${PUBLIC_TYPE_SECTION} mb-3`}>On this page</h3>

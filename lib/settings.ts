@@ -13,7 +13,21 @@ export const DEFAULT_SETTINGS: Settings = {
   socialLinks: [],
   theme: "system",
   postsPerPage: 10,
+  giscusEnabled: false,
+  giscusMapping: "pathname",
+  giscusLang: "ru",
 };
+
+/** True when Giscus is on and all required IDs from giscus.app are set. */
+export function isGiscusConfigured(settings: Settings): boolean {
+  return !!(
+    settings.giscusEnabled &&
+    settings.giscusRepo?.includes("/") &&
+    settings.giscusRepoId &&
+    settings.giscusCategory &&
+    settings.giscusCategoryId
+  );
+}
 
 // Public routes read settings on every render; cache like the menu (F6).
 const CACHE_TTL_MS = 60_000;
