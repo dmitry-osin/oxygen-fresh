@@ -3,12 +3,13 @@
 
 import { Head } from "fresh/runtime";
 import { define } from "@/utils.ts";
-import { listPublishedPosts } from "@/lib/posts.ts";
+import { listPublishedPosts, collectPostDays } from "@/lib/posts.ts";
 import { listTagsWithCounts } from "@/lib/tags.ts";
 import { getNavLinks } from "@/lib/menu.ts";
 import { getSettings } from "@/lib/settings.ts";
 import { getAuthorsMap } from "@/lib/users.ts";
 import { canonicalUrl } from "@/lib/seo.ts";
+import { parseCalendarMonth } from "@/utils/date.ts";
 import { PublicLayout } from "@/components/PublicLayout.tsx";
 import { PostCard } from "@/components/PostCard.tsx";
 import { Pagination } from "@/components/Pagination.tsx";
@@ -43,6 +44,8 @@ export const handler = define.handlers(async (ctx) => {
       recentPosts: allPosts.slice(0, 5),
       tags,
       authors,
+      postDays: collectPostDays(allPosts),
+      calendarMonth: parseCalendarMonth(ctx.url.searchParams.get("cal")),
       isAdmin: !!ctx.state.user,
     },
   };
@@ -58,6 +61,8 @@ export default define.page<typeof handler>(function Home({ data }) {
     recentPosts,
     tags,
     authors,
+    postDays,
+    calendarMonth,
     isAdmin,
   } = data;
   return (
@@ -110,7 +115,13 @@ export default define.page<typeof handler>(function Home({ data }) {
               )}
             <Pagination page={page} totalPages={totalPages} basePath="/" />
           </div>
-          <Sidebar recentPosts={recentPosts} tags={tags} />
+          <Sidebar
+            recentPosts={recentPosts}
+            tags={tags}
+            postDays={postDays}
+            calendarMonth={calendarMonth}
+            sidebarBlocks={settings.sidebarBlocks}
+          />
         </main>
       </PublicLayout>
     </>

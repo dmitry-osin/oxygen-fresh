@@ -76,6 +76,31 @@ export async function listPublishedPostSummaries(): Promise<PostSummary[]> {
   return (await listPublishedPosts()).map(toSummary);
 }
 
+/** UTC calendar day (YYYY-MM-DD) from a post's publishedAt. */
+export function postDayKey(post: Pick<Post, "publishedAt">): string | null {
+  return post.publishedAt ? post.publishedAt.slice(0, 10) : null;
+}
+
+/** Unique publish days for the sidebar calendar. */
+export function collectPostDays(
+  posts: Pick<Post, "publishedAt">[],
+): string[] {
+  const days = new Set<string>();
+  for (const post of posts) {
+    const day = postDayKey(post);
+    if (day) days.add(day);
+  }
+  return [...days].sort();
+}
+
+/** Published posts for a single UTC day (YYYY-MM-DD). */
+export async function listPostsOnDay(day: string): Promise<Post[]> {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return [];
+  return (await listPublishedPosts()).filter(
+    (post) => postDayKey(post) === day,
+  );
+}
+
 /** Published posts + drafts for the admin list. */
 export async function listAllPosts(): Promise<Post[]> {
   const [published, drafts] = await Promise.all([

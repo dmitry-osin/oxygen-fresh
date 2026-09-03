@@ -8,6 +8,7 @@
 import { kv, KvKeys } from "./kv.ts";
 import { saveMenuItems } from "./menu.ts";
 import { DEFAULT_SETTINGS, saveSettings } from "./settings.ts";
+import { normalizeSidebarBlocks } from "./sidebar.ts";
 import { indexPost } from "./search.ts";
 import { invalidateRedirectCache, validateRedirect } from "./redirects.ts";
 import { EXPORT_VERSION, type ExportData } from "./export.ts";
@@ -101,7 +102,15 @@ function validateSettings(item: unknown): Settings | null {
     (item.postsPerPage === undefined ||
       typeof item.postsPerPage === "number") &&
     (item.socialLinks === undefined || Array.isArray(item.socialLinks));
-  return ok ? { ...DEFAULT_SETTINGS, ...item } as Settings : null;
+  return ok
+    ? {
+      ...DEFAULT_SETTINGS,
+      ...(item as unknown as Settings),
+      sidebarBlocks: normalizeSidebarBlocks(
+        (item as { sidebarBlocks?: Settings["sidebarBlocks"] }).sidebarBlocks,
+      ),
+    }
+    : null;
 }
 
 /** Validate a list field, mapping every item through `validate`. */

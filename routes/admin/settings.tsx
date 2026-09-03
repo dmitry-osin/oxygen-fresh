@@ -9,8 +9,10 @@ import { saveMediaFile } from "@/lib/media.ts";
 import { SocialLinksFields } from "@/components/SocialLinksFields.tsx";
 import FilePickField from "@/islands/FilePickField.tsx";
 import SettingsTabs from "@/islands/SettingsTabs.tsx";
+import SidebarBlocksEditor from "@/islands/SidebarBlocksEditor.tsx";
 import type { Settings } from "@/types/index.ts";
 import { mediaAdminPreviewUrl } from "@/lib/media-urls.ts";
+import { parseSidebarBlocks } from "@/lib/sidebar.ts";
 import {
   ADMIN_BTN_PRIMARY,
   ADMIN_INPUT,
@@ -30,6 +32,7 @@ const THEMES: Settings["theme"][] = ["light", "dark", "system"];
 const SETTINGS_TABS = [
   { id: "general", label: "General" },
   { id: "seo", label: "SEO & social" },
+  { id: "sidebar", label: "Sidebar" },
   { id: "comments", label: "Comments" },
   { id: "contact", label: "Contact" },
 ] as const;
@@ -214,6 +217,12 @@ async function parseSettingsForm(
   if (typeof contact === "string") {
     return { ok: false, error: contact };
   }
+  const sidebarBlocks = parseSidebarBlocks(
+    String(form.get("sidebarBlocks") ?? "[]"),
+  );
+  if (typeof sidebarBlocks === "string") {
+    return { ok: false, error: sidebarBlocks };
+  }
   const uploads = await resolveUploads(form, current);
   if (!uploads.ok) return { ok: false, error: uploads.error };
   const text = (name: string) =>
@@ -233,6 +242,7 @@ async function parseSettingsForm(
       postsPerPage,
       ...giscus,
       ...contact,
+      sidebarBlocks,
     },
   };
 }
@@ -397,6 +407,14 @@ export default define.page<typeof handler>(function SettingsPage({ data }) {
             />
           </label>
           <SocialLinksFields links={settings.socialLinks} />
+        </div>
+
+        <div
+          data-settings-panel="sidebar"
+          class="space-y-4"
+          hidden={tab !== "sidebar"}
+        >
+          <SidebarBlocksEditor blocks={settings.sidebarBlocks} />
         </div>
 
         <div

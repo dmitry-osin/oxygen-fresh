@@ -12,7 +12,7 @@ import { canonicalUrl } from "@/lib/seo.ts";
 import { PublicLayout } from "@/components/PublicLayout.tsx";
 import { Sidebar } from "@/components/Sidebar.tsx";
 import { SeoMeta } from "@/components/SeoMeta.tsx";
-import { listPublishedPosts } from "@/lib/posts.ts";
+import { collectPostDays, listPublishedPosts } from "@/lib/posts.ts";
 import { listTagsWithCounts } from "@/lib/tags.ts";
 import {
   PUBLIC_MAIN_PY,
@@ -21,6 +21,7 @@ import {
   PUBLIC_SHELL,
   PUBLIC_TYPE_PAGE_TITLE,
 } from "@/lib/public-ui.ts";
+import { parseCalendarMonth } from "@/utils/date.ts";
 
 export const handler = define.handlers(async (ctx) => {
   const page = await getPageBySlug(ctx.params.slug);
@@ -40,13 +41,25 @@ export const handler = define.handlers(async (ctx) => {
       navLinks,
       recentPosts: recentPosts.slice(0, 5),
       tags,
+      postDays: collectPostDays(recentPosts),
+      calendarMonth: parseCalendarMonth(ctx.url.searchParams.get("cal")),
       isAdmin: !!ctx.state.user,
     },
   };
 });
 
 export default define.page<typeof handler>(function StaticPage({ data }) {
-  const { page, html, settings, navLinks, recentPosts, tags, isAdmin } = data;
+  const {
+    page,
+    html,
+    settings,
+    navLinks,
+    recentPosts,
+    tags,
+    postDays,
+    calendarMonth,
+    isAdmin,
+  } = data;
   const article = (
     <article>
       <header class="mb-8">
@@ -92,7 +105,13 @@ export default define.page<typeof handler>(function StaticPage({ data }) {
               class={`flex-1 ${PUBLIC_SHELL} ${PUBLIC_MAIN_PY} flex flex-col lg:flex-row gap-10 lg:gap-12`}
             >
               <div class="flex-1 min-w-0">{article}</div>
-              <Sidebar recentPosts={recentPosts} tags={tags} />
+              <Sidebar
+                recentPosts={recentPosts}
+                tags={tags}
+                postDays={postDays}
+                calendarMonth={calendarMonth}
+                sidebarBlocks={settings.sidebarBlocks}
+              />
             </main>
           )}
       </PublicLayout>

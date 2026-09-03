@@ -1,8 +1,15 @@
-// Sidebar for the "default" template (F7): author, TOC, recent posts, tags.
+// Sidebar for the "default" template (F7): configurable widgets
+// (author, calendar, recent, tags) plus automatic TOC on posts.
 
-import type { AuthorProfile, Post } from "@/types/index.ts";
+import type {
+  AuthorProfile,
+  Post,
+  SidebarBlockConfig,
+} from "@/types/index.ts";
 import type { TocEntry } from "@/lib/markdown.ts";
 import type { TagWithCount } from "@/lib/tags.ts";
+import type { CalendarMonth } from "@/utils/date.ts";
+import { DEFAULT_SIDEBAR_BLOCKS } from "@/lib/sidebar.ts";
 import {
   PUBLIC_ASIDE,
   PUBLIC_LINK,
@@ -11,6 +18,8 @@ import {
   PUBLIC_TYPE_SECTION,
 } from "@/lib/public-ui.ts";
 import { AuthorCard } from "./AuthorCard.tsx";
+import { PostCalendar } from "./PostCalendar.tsx";
+import type { ComponentChildren } from "preact";
 
 /** Map tag frequency to a font-size class (popular → larger). */
 function tagCloudClass(count: number, min: number, max: number): string {
@@ -23,44 +32,84 @@ function tagCloudClass(count: number, min: number, max: number): string {
   return "text-xs font-medium";
 }
 
+function TocSection({ toc }: { toc: TocEntry[] }) {
+  return (
+    <section>
+      <h3 class={`${PUBLIC_TYPE_SECTION} mb-3`}>On this page</h3>
+      <ul class="space-y-2 text-sm">
+        {toc.map((entry) => (
+          <li
+            key={entry.id}
+            class={entry.level === 3 ? "pl-3" : ""}
+          >
+            <a href={`#${entry.id}`} class={PUBLIC_LINK_UNDERLINE}>
+              {entry.text}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 export function Sidebar(
-  { recentPosts, tags, toc = [], author }: {
+  {
+    recentPosts,
+    tags,
+    toc = [],
+    author,
+    postDays = [],
+    calendarMonth,
+    selectedDay,
+    sidebarBlocks = DEFAULT_SIDEBAR_BLOCKS,
+  }: {
     recentPosts: Post[];
     tags: TagWithCount[];
     toc?: TocEntry[];
     author?: AuthorProfile;
+    postDays?: string[];
+    calendarMonth?: CalendarMonth;
+    selectedDay?: string;
+    sidebarBlocks?: SidebarBlockConfig[];
   },
 ) {
   const counts = tags.map((t) => t.count);
   const min = counts.length ? Math.min(...counts) : 0;
   const max = counts.length ? Math.max(...counts) : 0;
+  const enabled = sidebarBlocks.filter((block) => block.enabled);
 
-  return (
-    <aside class={PUBLIC_ASIDE}>
-      {author && (
-        <div class="lg:sticky lg:top-24">
-          <AuthorCard author={author} />
-        </div>
-      )}
-      {toc.length > 0 && (
-        <section>
-          <h3 class={`${PUBLIC_TYPE_SECTION} mb-3`}>On this page</h3>
-          <ul class="space-y-2 text-sm">
-            {toc.map((entry) => (
-              <li
-                key={entry.id}
-                class={entry.level === 3 ? "pl-3" : ""}
-              >
-                <a href={`#${entry.id}`} class={PUBLIC_LINK_UNDERLINE}>
-                  {entry.text}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-      {recentPosts.length > 0 && (
-        <section>
+  const nodes: ComponentChildren[] = [];
+  let tocPlaced = false;
+
+  for (const block of enabled) {
+    if (block.id === "author") {
+      if (author) {
+        nodes.push(
+          <div key="author" class="lg:sticky lg:top-24">
+            <AuthorCard author={author} />
+          </div>,
+        );
+      }
+      if (toc.length > 0) {
+        nodes.push(<TocSection key="toc" toc={toc} />);
+        tocPlaced = true;
+      }
+      continue;
+    }
+    if (block.id === "calendar" && calendarMonth) {
+      nodes.push(
+        <PostCalendar
+          key="calendar"
+          month={calendarMonth}
+          daysWithPosts={postDays}
+          selectedDay={selectedDay}
+        />,
+      );
+      continue;
+    }
+    if (block.id === "recent" && recentPosts.length > 0) {
+      nodes.push(
+        <section key="recent">
           <h3 class={`${PUBLIC_TYPE_SECTION} mb-3`}>Recent posts</h3>
           <ul class="space-y-2.5">
             {recentPosts.map((post) => (
@@ -74,10 +123,13 @@ export function Sidebar(
               </li>
             ))}
           </ul>
-        </section>
-      )}
-      {tags.length > 0 && (
-        <section>
+        </section>,
+      );
+      continue;
+    }
+    if (block.id === "tags" && tags.length > 0) {
+      nodes.push(
+        <section key="tags">
           <h3 class={`${PUBLIC_TYPE_SECTION} mb-3`}>Popular tags</h3>
           <div class="flex flex-wrap items-baseline gap-x-3 gap-y-2">
             {tags.map((tag) => (
@@ -96,8 +148,16 @@ export function Sidebar(
               </a>
             ))}
           </div>
-        </section>
-      )}
-    </aside>
-  );
+        </section>,
+      );
+    }
+  }
+
+  if (!tocPlaced && toc.length > 0) {
+    nodes.unshift(<TocSection key="toc" toc={toc} />);
+  }
+
+  if (nodes.length === 0) return null;
+
+  return <aside class={PUBLIC_ASIDE}>{nodes}</aside>;
 }

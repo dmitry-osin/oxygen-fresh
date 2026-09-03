@@ -5,6 +5,7 @@ import { Head } from "fresh/runtime";
 import { HttpError } from "fresh";
 import { define } from "@/utils.ts";
 import {
+  collectPostDays,
   getPublishedBySlug,
   listPublishedPosts,
   relatedPosts,
@@ -16,7 +17,7 @@ import { getSettings, isGiscusConfigured } from "@/lib/settings.ts";
 import { getAuthor } from "@/lib/users.ts";
 import { renderMarkdownWithToc } from "@/lib/markdown.ts";
 import { canonicalUrl, postJsonLd } from "@/lib/seo.ts";
-import { formatDate } from "@/utils/date.ts";
+import { formatDate, parseCalendarMonth } from "@/utils/date.ts";
 import { PublicLayout } from "@/components/PublicLayout.tsx";
 import { Sidebar } from "@/components/Sidebar.tsx";
 import { SeoMeta } from "@/components/SeoMeta.tsx";
@@ -58,6 +59,8 @@ export const handler = define.handlers(async (ctx) => {
       tags,
       related,
       author,
+      postDays: collectPostDays(recent),
+      calendarMonth: parseCalendarMonth(ctx.url.searchParams.get("cal")),
       isAdmin: !!ctx.state.user,
     },
   };
@@ -74,6 +77,8 @@ export default define.page<typeof handler>(function PostPage({ data }) {
     tags,
     related,
     author,
+    postDays,
+    calendarMonth,
     isAdmin,
   } = data;
   const article = (
@@ -168,6 +173,9 @@ export default define.page<typeof handler>(function PostPage({ data }) {
                 tags={tags}
                 toc={toc}
                 author={author}
+                postDays={postDays}
+                calendarMonth={calendarMonth}
+                sidebarBlocks={settings.sidebarBlocks}
               />
             </main>
           )}

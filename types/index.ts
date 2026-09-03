@@ -119,6 +119,19 @@ export interface Settings {
   contactFormIntro?: string;
   /** Math captcha on the public contact form (default on). */
   contactCaptchaEnabled: boolean;
+  /**
+   * Public sidebar widgets (author, calendar, recent, tags):
+   * visibility + display order. TOC on post pages stays automatic.
+   */
+  sidebarBlocks: SidebarBlockConfig[];
+}
+
+/** Configurable public sidebar widgets (not including per-post TOC). */
+export type SidebarBlockId = "author" | "calendar" | "recent" | "tags";
+
+export interface SidebarBlockConfig {
+  id: SidebarBlockId;
+  enabled: boolean;
 }
 
 export interface ContactMessage {

@@ -5,6 +5,10 @@
 import { kv, KvKeys } from "./kv.ts";
 import { recordCache } from "./perf.ts";
 import type { Settings } from "@/types/index.ts";
+import {
+  DEFAULT_SIDEBAR_BLOCKS,
+  normalizeSidebarBlocks,
+} from "./sidebar.ts";
 
 export const DEFAULT_SETTINGS: Settings = {
   siteName: "oxygen-blog",
@@ -20,6 +24,7 @@ export const DEFAULT_SETTINGS: Settings = {
   contactFormLabel: "Contact",
   contactFormMenuOrder: 99,
   contactCaptchaEnabled: true,
+  sidebarBlocks: DEFAULT_SIDEBAR_BLOCKS,
 };
 
 /** True when Giscus is on and all required IDs from giscus.app are set. */
@@ -45,6 +50,7 @@ export async function getSettings(): Promise<Settings> {
   }
   const stored = (await kv.get<Settings>(KvKeys.settings())).value;
   const settings = { ...DEFAULT_SETTINGS, ...stored };
+  settings.sidebarBlocks = normalizeSidebarBlocks(settings.sidebarBlocks);
   cached = { settings, at: Date.now() };
   recordCache("settings", false);
   return settings;
