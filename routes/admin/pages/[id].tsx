@@ -44,7 +44,13 @@ export const handler = define.handlers({
   async GET(ctx) {
     const page = await getPageById(ctx.params.id);
     if (!page) throw new HttpError(404);
-    return { data: { page, error: null as string | null } };
+    return {
+      data: {
+        page,
+        error: null as string | null,
+        isNew: ctx.url.searchParams.get("new") === "1",
+      },
+    };
   },
 
   async POST(ctx) {
@@ -52,18 +58,21 @@ export const handler = define.handlers({
     const page = await getPageById(id);
     if (!page) throw new HttpError(404);
     const form = await ctx.req.formData();
+    const isNew = ctx.url.searchParams.get("new") === "1";
     if (String(form.get("action")) === "delete") {
       await deletePage(id);
       return ctx.redirect("/admin/pages");
     }
     const result = await updatePage(id, parsePageInput(form));
-    if (!result.ok) return { data: { page, error: result.error } };
+    if (!result.ok) {
+      return { data: { page, error: result.error, isNew } };
+    }
     return ctx.redirect(`/admin/pages/${id}`);
   },
 });
 
 export default define.page<typeof handler>(function PageEditor({ data }) {
-  const { page, error } = data;
+  const { page, error, isNew } = data;
   const menuTone = page.showInMenu
     ? "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300"
     : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300";
@@ -99,7 +108,7 @@ export default define.page<typeof handler>(function PageEditor({ data }) {
 
       {error && <p class={`${ADMIN_TYPE_ERROR} mb-4`}>{error}</p>}
 
-      <PageForm page={page} />
+      <PageForm page={page} isNew={isNew} />
 
       <div class={`${ADMIN_CARD} flex flex-wrap items-center gap-2 mt-6`}>
         <ConfirmDeleteTrigger itemName={page.title} />

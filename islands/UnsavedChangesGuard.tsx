@@ -2,6 +2,9 @@
 // In-app link clicks use a styled modal; tab close/refresh still uses the
 // browser beforeunload dialog (browsers do not allow customizing that one).
 // Mark ephemeral fields (e.g. settings tab) with data-unsaved-ignore.
+//
+// Brand-new drafts pass forceConfirm + discardActionUrl so leaving cancels
+// creation (POST delete) instead of keeping an empty Untitled entity.
 
 import { useEffect, useRef } from "preact/hooks";
 import { useSignal } from "@preact/signals";
@@ -11,6 +14,17 @@ import {
   ADMIN_TYPE_MODAL_TITLE,
   ADMIN_TYPE_MUTED,
 } from "@/lib/admin-ui.ts";
+
+export interface UnsavedChangesGuardProps {
+  /** Ask even when the form still matches its initial values. */
+  forceConfirm?: boolean;
+  title?: string;
+  message?: string;
+  stayLabel?: string;
+  leaveLabel?: string;
+  /** POST target that deletes the new draft (expects action=delete). */
+  discardActionUrl?: string;
+}
 
 function serializeForm(form: HTMLFormElement): string {
   const ignore = new Set<string>();
@@ -32,10 +46,35 @@ function isModifiedClick(e: MouseEvent): boolean {
   return e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0;
 }
 
-export default function UnsavedChangesGuard() {
+function samePathname(href: string): boolean {
+  try {
+    const next = new URL(href, globalThis.location.href);
+    return next.origin === globalThis.location.origin &&
+      next.pathname === globalThis.location.pathname;
+  } catch {
+    return false;
+  }
+}
+
+export default function UnsavedChangesGuard(
+  props: UnsavedChangesGuardProps = {},
+) {
+  const {
+    forceConfirm = false,
+    title = "Unsaved changes",
+    message = "You have unsaved edits on this page. Leave without saving?",
+    stayLabel = "Stay",
+    leaveLabel = "Leave",
+    discardActionUrl,
+  } = props;
+
   const anchor = useRef<HTMLSpanElement>(null);
   const pendingHref = useSignal<string | null>(null);
   const bypassRef = useRef(false);
+  const forceRef = useRef(forceConfirm);
+  const discardRef = useRef(discardActionUrl);
+  forceRef.current = forceConfirm;
+  discardRef.current = discardActionUrl;
 
   useEffect(() => {
     const form = anchor.current?.closest("form");
@@ -54,14 +93,24 @@ export default function UnsavedChangesGuard() {
       return ready && !bypassRef.current && serializeForm(form!) !== initial;
     }
 
+    function needsConfirm(href: string): boolean {
+      if (bypassRef.current) return false;
+      const dirty = isDirty();
+      if (dirty) return true;
+      if (!forceRef.current) return false;
+      // Allow Edit ↔ History on the same entity without discarding.
+      return !samePathname(href);
+    }
+
     function onBeforeUnload(e: BeforeUnloadEvent) {
-      if (!isDirty()) return;
+      if (bypassRef.current) return;
+      if (!isDirty() && !forceRef.current) return;
       e.preventDefault();
       e.returnValue = "";
     }
 
     function onClick(e: MouseEvent) {
-      if (bypassRef.current || isModifiedClick(e)) return;
+      if (isModifiedClick(e)) return;
       const target = e.target;
       if (!(target instanceof Element)) return;
       const link = target.closest("a[href]");
@@ -69,7 +118,7 @@ export default function UnsavedChangesGuard() {
       if (link.target === "_blank" || link.hasAttribute("download")) return;
       const href = link.getAttribute("href");
       if (!href || href.startsWith("#") || href.startsWith("mailto:")) return;
-      if (!isDirty()) return;
+      if (!needsConfirm(link.href)) return;
       e.preventDefault();
       e.stopPropagation();
       pendingHref.value = link.href;
@@ -108,6 +157,23 @@ export default function UnsavedChangesGuard() {
     if (!href) return;
     bypassRef.current = true;
     pendingHref.value = null;
+
+    const discard = discardRef.current;
+    if (discard && !samePathname(href)) {
+      const form = document.createElement("form");
+      form.method = "POST";
+      form.action = discard;
+      form.style.display = "none";
+      const action = document.createElement("input");
+      action.type = "hidden";
+      action.name = "action";
+      action.value = "delete";
+      form.appendChild(action);
+      document.body.appendChild(form);
+      form.submit();
+      return;
+    }
+
     globalThis.location.href = href;
   }
 
@@ -126,10 +192,10 @@ export default function UnsavedChangesGuard() {
               id="unsaved-title"
               class={`${ADMIN_TYPE_MODAL_TITLE} mb-2`}
             >
-              Unsaved changes
+              {title}
             </h2>
             <p class={`${ADMIN_TYPE_MUTED} mb-6`}>
-              You have unsaved edits on this page. Leave without saving?
+              {message}
             </p>
             <div class="flex gap-2 justify-end">
               <button
@@ -137,14 +203,14 @@ export default function UnsavedChangesGuard() {
                 class={ADMIN_BTN_SECONDARY}
                 onClick={stay}
               >
-                Stay
+                {stayLabel}
               </button>
               <button
                 type="button"
                 class={ADMIN_BTN_DANGER}
                 onClick={leave}
               >
-                Leave
+                {leaveLabel}
               </button>
             </div>
           </div>

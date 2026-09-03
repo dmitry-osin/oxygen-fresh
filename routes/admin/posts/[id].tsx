@@ -14,6 +14,7 @@ import {
 import { listVersions, restoreVersionToPost } from "@/lib/versions.ts";
 import { PostForm } from "@/components/PostForm.tsx";
 import { ConfirmDeleteTrigger } from "@/components/ConfirmDeleteTrigger.tsx";
+import UnsavedChangesGuard from "@/islands/UnsavedChangesGuard.tsx";
 import { formatDateTime } from "@/utils/date.ts";
 import { slugify } from "@/utils/slugify.ts";
 import type { Post, PostSnapshot, RedirectEntry } from "@/types/index.ts";
@@ -49,6 +50,7 @@ interface EditorData {
   shortLink: RedirectEntry | null;
   error: string | null;
   notice: string | null;
+  isNew: boolean;
 }
 
 function toIso(local: string): string | null {
@@ -135,6 +137,7 @@ async function handleSimpleAction(
           shortLink: await findShortLinkForPost(id),
           error: restored.error,
           notice: null,
+          isNew: false,
         },
       };
     }
@@ -168,6 +171,7 @@ export const handler = define.handlers({
         notice: restored
           ? "Version restored into this post. Review and save/publish as needed."
           : null,
+        isNew: ctx.url.searchParams.get("new") === "1",
       },
     };
   },
@@ -178,6 +182,7 @@ export const handler = define.handlers({
     if (!post) throw new HttpError(404);
     const form = await ctx.req.formData();
     const action = String(form.get("action") ?? "save");
+    const isNew = ctx.url.searchParams.get("new") === "1";
     const simple = await handleSimpleAction(action, id, post, form);
     if (simple) return simple;
 
@@ -191,6 +196,7 @@ export const handler = define.handlers({
           shortLink: await findShortLinkForPost(id),
           error: saved.error,
           notice: null,
+          isNew,
         },
       };
     }
@@ -205,6 +211,7 @@ export const handler = define.handlers({
             shortLink: await findShortLinkForPost(id),
             error: published.error,
             notice: null,
+            isNew: false,
           },
         };
       }
@@ -306,13 +313,17 @@ function HistoryTable(
 }
 
 export default define.page<typeof handler>(function PostEditor({ data }) {
-  const { post, tab, versions, shortLink, error, notice } = data;
+  const { post, tab, versions, shortLink, error, notice, isNew } = data;
   const tabCls = (active: boolean) =>
     `px-3 py-2 rounded-md ${ADMIN_TYPE_BODY} ${
       active
         ? "bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900 font-medium"
         : "text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800"
     }`;
+  const editHref = `/admin/posts/${post.id}${isNew ? "?new=1" : ""}`;
+  const historyHref = `/admin/posts/${post.id}?tab=history${
+    isNew ? "&new=1" : ""
+  }`;
   return (
     <div class="w-full px-6 py-8 lg:px-10">
       <Head>
@@ -333,13 +344,10 @@ export default define.page<typeof handler>(function PostEditor({ data }) {
           <p class={`${ADMIN_TYPE_MUTED} mt-1`}>/{post.slug}</p>
         </div>
         <nav class="flex gap-1 p-1 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
-          <a href={`/admin/posts/${post.id}`} class={tabCls(tab === "edit")}>
+          <a href={editHref} class={tabCls(tab === "edit")}>
             Edit
           </a>
-          <a
-            href={`/admin/posts/${post.id}?tab=history`}
-            class={tabCls(tab === "history")}
-          >
+          <a href={historyHref} class={tabCls(tab === "history")}>
             History
           </a>
         </nav>
@@ -348,8 +356,23 @@ export default define.page<typeof handler>(function PostEditor({ data }) {
       {notice && <p class={`${ADMIN_TYPE_SUCCESS} mb-4`}>{notice}</p>}
       {error && <p class={`${ADMIN_TYPE_ERROR} mb-4`}>{error}</p>}
 
+      {isNew && tab === "history" && (
+        <form class="hidden" aria-hidden="true">
+          <UnsavedChangesGuard
+            forceConfirm
+            title="Cancel creation?"
+            message="This post was never saved. Discard it and leave?"
+            stayLabel="Keep editing"
+            leaveLabel="Discard"
+            discardActionUrl={`/admin/posts?id=${
+              encodeURIComponent(post.id)
+            }`}
+          />
+        </form>
+      )}
+
       {tab === "edit"
-        ? <PostForm post={post} shortLink={shortLink} />
+        ? <PostForm post={post} shortLink={shortLink} isNew={isNew} />
         : <HistoryTable post={post} versions={versions} />}
     </div>
   );

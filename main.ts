@@ -1,5 +1,6 @@
 import { App, csp, staticFiles } from "fresh";
 import { type State } from "./utils.ts";
+import { bootstrap } from "./lib/bootstrap.ts";
 import { startScheduler } from "./lib/scheduler.ts";
 
 export const app = new App<State>();
@@ -44,6 +45,9 @@ app.use(csp({
 
 // Include file-system based routes here
 app.fsRoutes();
+
+// First-run seed from .env (admin user + settings) when KV is empty.
+await bootstrap();
 
 // Scheduled posts (F20): publish due posts on start and every hour.
 startScheduler();

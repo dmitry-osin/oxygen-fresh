@@ -38,10 +38,23 @@ function FieldSection(props: {
   );
 }
 
-export function PageForm({ page }: { page: Page }) {
+export function PageForm(
+  { page, isNew = false }: { page: Page; isNew?: boolean },
+) {
   return (
     <form method="post" class="space-y-6">
-      <UnsavedChangesGuard />
+      <UnsavedChangesGuard
+        forceConfirm={isNew}
+        title={isNew ? "Cancel creation?" : undefined}
+        message={isNew
+          ? "This page was never saved. Discard it and leave?"
+          : undefined}
+        stayLabel={isNew ? "Keep editing" : undefined}
+        leaveLabel={isNew ? "Discard" : undefined}
+        discardActionUrl={isNew
+          ? `/admin/pages?id=${encodeURIComponent(page.id)}`
+          : undefined}
+      />
 
       <div class="grid gap-6 xl:grid-cols-2 items-start">
         <FieldSection

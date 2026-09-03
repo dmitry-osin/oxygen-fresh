@@ -54,7 +54,16 @@ function FieldSection(props: {
 }
 
 export function PostForm(
-  { post, shortLink = null }: { post: Post; shortLink?: RedirectEntry | null },
+  {
+    post,
+    shortLink = null,
+    isNew = false,
+  }: {
+    post: Post;
+    shortLink?: RedirectEntry | null;
+    /** Freshly created draft — leaving cancels creation. */
+    isNew?: boolean;
+  },
 ) {
   return (
     <div class="space-y-6">
@@ -63,7 +72,18 @@ export function PostForm(
       )}
 
       <form method="post" class="space-y-6">
-        <UnsavedChangesGuard />
+        <UnsavedChangesGuard
+          forceConfirm={isNew}
+          title={isNew ? "Cancel creation?" : undefined}
+          message={isNew
+            ? "This post was never saved. Discard it and leave?"
+            : undefined}
+          stayLabel={isNew ? "Keep editing" : undefined}
+          leaveLabel={isNew ? "Discard" : undefined}
+          discardActionUrl={isNew
+            ? `/admin/posts?id=${encodeURIComponent(post.id)}`
+            : undefined}
+        />
 
         <div class="grid gap-6 xl:grid-cols-2 items-start">
           <FieldSection

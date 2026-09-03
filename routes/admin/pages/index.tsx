@@ -43,7 +43,7 @@ export const handler = define.handlers({
     if (action === "create") {
       const result = await createPage({ title: "Untitled page" });
       if (!result.ok) throw new HttpError(500, result.error);
-      return ctx.redirect(`/admin/pages/${result.page.id}`);
+      return ctx.redirect(`/admin/pages/${result.page.id}?new=1`);
     }
 
     if (action === "delete" && id) await deletePage(id);

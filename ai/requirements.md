@@ -68,6 +68,16 @@ All configuration via environment variables (12-factor app). No config files bak
 | `KV_PATH` | No | Defaults to `./data/kv.sqlite3` |
 | `UPLOAD_DIR` | No | Defaults to `./static/uploads` |
 | `SITE_URL` | Yes | Public URL, e.g. `https://blog.example.com` |
+| `SITE_NAME` | No | First-run site title (seeded into KV settings once) |
+| `SITE_DESCRIPTION` | No | First-run site description |
+| `FOOTER_DESCRIPTION` | No | First-run footer blurb |
+| `THEME` | No | First-run theme: `light` / `dark` / `system` |
+| `POSTS_PER_PAGE` | No | First-run pagination size (1–100) |
+| `DEFAULT_META_TITLE` | No | First-run default SEO title |
+| `DEFAULT_META_DESCRIPTION` | No | First-run default SEO description |
+| `GISCUS_*` | No | First-run Giscus seed (`ENABLED`, `REPO`, `REPO_ID`, `CATEGORY`, `CATEGORY_ID`, `MAPPING`, `LANG`) |
+| `CONTACT_FORM_*` / `CONTACT_CAPTCHA_ENABLED` | No | First-run contact form seed |
+| `ADMIN_FIRST_NAME` / `LAST_NAME` / `BIO` / `EMAIL` / `LOCATION` / `WEBSITE` | No | Applied only when the admin user is created |
 
 ---
 

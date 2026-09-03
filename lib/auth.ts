@@ -23,19 +23,27 @@ export async function getUser(username: string): Promise<User | null> {
 }
 
 /**
- * Create the admin user from the ADMIN_PASSWORD_HASH env var on first use
- * (first setup). Returns null when the env var is missing.
+ * Create the admin user from env on first use (first setup).
+ * Optional profile fields (ADMIN_FIRST_NAME, …) apply only on create.
+ * Returns null when ADMIN_PASSWORD_HASH is missing.
  */
 export async function ensureAdminUser(): Promise<User | null> {
   const existing = await getUser(ADMIN_USERNAME);
   if (existing) return existing;
   const passwordHash = Deno.env.get("ADMIN_PASSWORD_HASH");
   if (!passwordHash) return null;
+  const trim = (name: string) => Deno.env.get(name)?.trim() || undefined;
   const user: User = {
     username: ADMIN_USERNAME,
     passwordHash,
     role: "admin",
     createdAt: nowIso(),
+    firstName: trim("ADMIN_FIRST_NAME"),
+    lastName: trim("ADMIN_LAST_NAME"),
+    bio: trim("ADMIN_BIO"),
+    email: trim("ADMIN_EMAIL"),
+    location: trim("ADMIN_LOCATION"),
+    website: trim("ADMIN_WEBSITE"),
   };
   await kv.set(KvKeys.user(ADMIN_USERNAME), user);
   return user;

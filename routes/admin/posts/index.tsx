@@ -94,7 +94,7 @@ export const handler = define.handlers({
         ctx.state.user?.username ?? "admin",
       );
       if (!result.ok) throw new HttpError(500, result.error);
-      return ctx.redirect(`/admin/posts/${result.post.id}`);
+      return ctx.redirect(`/admin/posts/${result.post.id}?new=1`);
     }
 
     if (!id) return listRedirect(ctx.url);

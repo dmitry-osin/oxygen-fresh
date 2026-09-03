@@ -19,8 +19,10 @@ cp .env.example .env  # fill in ADMIN_PASSWORD_HASH, SESSION_SECRET, SITE_URL
 deno task dev         # http://localhost:5173
 ```
 
-Admin panel: `/admin`. The admin user is created lazily from
-`ADMIN_PASSWORD_HASH` on first login. Generate the hash with:
+Admin panel: `/admin`. On startup the app seeds the admin user and site
+settings from `.env` when KV is empty (see optional `SITE_*` / `ADMIN_*` /
+`GISCUS_*` / `CONTACT_*` vars in `.env.example`). The admin password comes from
+`ADMIN_PASSWORD_HASH`. Generate the hash with:
 
 ```sh
 deno eval 'import bcrypt from "npm:bcryptjs"; console.log(bcrypt.hashSync("your-password", 10))'
