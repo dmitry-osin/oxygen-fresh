@@ -15,6 +15,10 @@ docker run -d --name oxygen-blog \
   -e ADMIN_PASSWORD_HASH='$2a$10$...' \
   -e SESSION_SECRET='random-string-min-32-chars' \
   -e SITE_URL='https://blog.example.com' \
+  -e SITE_NAME='My Blog' \
+  -e SITE_DESCRIPTION='Notes and essays' \
+  -e ADMIN_FIRST_NAME='Ada' \
+  -e ADMIN_LAST_NAME='Lovelace' \
   --restart unless-stopped \
   oxygen-blog
 ```
@@ -27,16 +31,37 @@ deno eval 'import bcrypt from "npm:bcryptjs"; console.log(bcrypt.hashSync("your-
 
 Generate a session secret: `openssl rand -hex 32`.
 
+On first boot with an empty data volume, the container seeds the admin user and
+site settings from env (`lib/bootstrap.ts`). Changing seed vars later does
+**not** overwrite values already saved in Admin → Settings / Profile. Full
+template: `.env.example`.
+
 ### Environment variables
 
-| Variable              | Required | Default             | Notes                                                                                                                         |
-| --------------------- | -------- | ------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `ADMIN_PASSWORD_HASH` | yes      | -                   | Bcrypt hash. **Wrap in single quotes**: the loader expands `$...` inside unquoted/double-quoted values and corrupts the hash. |
-| `SESSION_SECRET`      | yes      | -                   | Random string, min 32 chars.                                                                                                  |
-| `SITE_URL`            | yes      | -                   | Public URL; enables the `Secure` cookie flag on https.                                                                        |
-| `PORT`                | no       | `8000`              | Internal listen port.                                                                                                         |
-| `KV_PATH`             | no       | `./data/kv.sqlite3` | Keep it inside the `/app/data` volume.                                                                                        |
-| `UPLOAD_DIR`          | no       | `./static/uploads`  | Keep it inside the uploads volume.                                                                                            |
+| Variable | Required | Default | Notes |
+| -------- | -------- | ------- | ----- |
+| `ADMIN_PASSWORD_HASH` | yes | - | Bcrypt hash. **Wrap in single quotes**: the loader expands `$...` inside unquoted/double-quoted values and corrupts the hash. |
+| `SESSION_SECRET` | yes | - | Random string, min 32 chars. |
+| `SITE_URL` | yes | - | Public URL; enables the `Secure` cookie flag on https. |
+| `PORT` | no | `8000` | Internal listen port. |
+| `KV_PATH` | no | `./data/kv.sqlite3` | Keep it inside the `/app/data` volume. |
+| `UPLOAD_DIR` | no | `./static/uploads` | Keep it inside the uploads volume. |
+| `SITE_NAME` | no | `oxygen-blog` | First-run site title (KV seed). |
+| `SITE_DESCRIPTION` | no | empty | First-run site description. |
+| `FOOTER_DESCRIPTION` | no | empty | First-run footer blurb. |
+| `THEME` | no | `system` | First-run theme: `light` / `dark` / `system`. |
+| `POSTS_PER_PAGE` | no | `10` | First-run pagination (1–100). |
+| `DEFAULT_META_TITLE` / `DEFAULT_META_DESCRIPTION` | no | empty | First-run SEO defaults. |
+| `GISCUS_ENABLED` | no | `false` | First-run comments toggle. |
+| `GISCUS_REPO` / `GISCUS_REPO_ID` / `GISCUS_CATEGORY` / `GISCUS_CATEGORY_ID` | no | empty | First-run Giscus IDs from giscus.app. |
+| `GISCUS_MAPPING` | no | `pathname` | `pathname` / `url` / `title`. |
+| `GISCUS_LANG` | no | `ru` | Giscus UI language. |
+| `CONTACT_FORM_ENABLED` | no | `false` | First-run public `/contact` form. |
+| `CONTACT_FORM_LABEL` | no | `Contact` | Menu label. |
+| `CONTACT_FORM_MENU_ORDER` | no | `99` | 0-based menu position. |
+| `CONTACT_FORM_INTRO` | no | empty | Intro above the form. |
+| `CONTACT_CAPTCHA_ENABLED` | no | `true` | Math captcha on contact form. |
+| `ADMIN_FIRST_NAME` / `ADMIN_LAST_NAME` / `ADMIN_BIO` / `ADMIN_EMAIL` / `ADMIN_LOCATION` / `ADMIN_WEBSITE` | no | empty | Applied only when the admin user is created. |
 
 All configuration is environment-only; no config files are baked into the image
 (12-factor, ai/requirements.md:61).
@@ -96,8 +121,11 @@ single-user run, your numbers will vary):
 
 ## 6. Operational notes
 
+- First boot seeds admin + settings from env when the data volume is empty
+  (`lib/bootstrap.ts`); see `.env.example`.
 - Scheduled posts auto-publish on server start and hourly (`lib/scheduler.ts`).
-- In-memory caches (menu, settings, redirects) expire after 60 seconds; admin
-  writes invalidate them immediately.
+- In-memory caches (menu, settings, redirects, post/page summaries) expire
+  after 60 seconds; admin writes invalidate them immediately.
 - The admin panel lives under `/admin`; sessions live in KV for 7 days.
+- Container health check probes `GET /` every 30s.
 - Logs: `docker logs oxygen-blog`.
