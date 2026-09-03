@@ -12,7 +12,12 @@ import SettingsTabs from "@/islands/SettingsTabs.tsx";
 import SidebarBlocksEditor from "@/islands/SidebarBlocksEditor.tsx";
 import type { Settings } from "@/types/index.ts";
 import { mediaAdminPreviewUrl } from "@/lib/media-urls.ts";
-import { parseSidebarBlocks } from "@/lib/sidebar.ts";
+import {
+  DEFAULT_SIDEBAR_BLOCKS,
+  DEFAULT_SIDEBAR_HOME,
+  DEFAULT_SIDEBAR_PAGE,
+  parseSidebarBlocks,
+} from "@/lib/sidebar.ts";
 import {
   ADMIN_BTN_PRIMARY,
   ADMIN_INPUT,
@@ -217,11 +222,26 @@ async function parseSettingsForm(
   if (typeof contact === "string") {
     return { ok: false, error: contact };
   }
-  const sidebarBlocks = parseSidebarBlocks(
-    String(form.get("sidebarBlocks") ?? "[]"),
+  const sidebarHome = parseSidebarBlocks(
+    String(form.get("sidebarHome") ?? "[]"),
+    DEFAULT_SIDEBAR_HOME,
   );
-  if (typeof sidebarBlocks === "string") {
-    return { ok: false, error: sidebarBlocks };
+  if (typeof sidebarHome === "string") {
+    return { ok: false, error: sidebarHome };
+  }
+  const sidebarPost = parseSidebarBlocks(
+    String(form.get("sidebarPost") ?? "[]"),
+    DEFAULT_SIDEBAR_BLOCKS,
+  );
+  if (typeof sidebarPost === "string") {
+    return { ok: false, error: sidebarPost };
+  }
+  const sidebarPage = parseSidebarBlocks(
+    String(form.get("sidebarPage") ?? "[]"),
+    DEFAULT_SIDEBAR_PAGE,
+  );
+  if (typeof sidebarPage === "string") {
+    return { ok: false, error: sidebarPage };
   }
   const uploads = await resolveUploads(form, current);
   if (!uploads.ok) return { ok: false, error: uploads.error };
@@ -242,7 +262,9 @@ async function parseSettingsForm(
       postsPerPage,
       ...giscus,
       ...contact,
-      sidebarBlocks,
+      sidebarHome,
+      sidebarPost,
+      sidebarPage,
     },
   };
 }
@@ -411,10 +433,35 @@ export default define.page<typeof handler>(function SettingsPage({ data }) {
 
         <div
           data-settings-panel="sidebar"
-          class="space-y-4"
+          class="space-y-8"
           hidden={tab !== "sidebar"}
         >
-          <SidebarBlocksEditor blocks={settings.sidebarBlocks} />
+          <p class={ADMIN_TYPE_MUTED}>
+            Configure widgets separately for the blog home, a single post, and
+            a static page. Drag to reorder; uncheck to hide. The table of
+            contents on posts is always shown when the post has headings.
+          </p>
+          <section class="space-y-3">
+            <h2 class="text-sm font-semibold">Blog home</h2>
+            <SidebarBlocksEditor
+              name="sidebarHome"
+              blocks={settings.sidebarHome}
+            />
+          </section>
+          <section class="space-y-3">
+            <h2 class="text-sm font-semibold">Blog post</h2>
+            <SidebarBlocksEditor
+              name="sidebarPost"
+              blocks={settings.sidebarPost}
+            />
+          </section>
+          <section class="space-y-3">
+            <h2 class="text-sm font-semibold">Page</h2>
+            <SidebarBlocksEditor
+              name="sidebarPage"
+              blocks={settings.sidebarPage}
+            />
+          </section>
         </div>
 
         <div

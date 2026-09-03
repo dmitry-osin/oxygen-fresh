@@ -175,7 +175,7 @@ export default define.page<typeof handler>(function PostPage({ data }) {
                 author={author}
                 postDays={postDays}
                 calendarMonth={calendarMonth}
-                sidebarBlocks={settings.sidebarBlocks}
+                sidebarBlocks={settings.sidebarPost}
               />
             </main>
           )}

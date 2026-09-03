@@ -23,11 +23,24 @@ export const DEFAULT_SIDEBAR_BLOCKS: SidebarBlockConfig[] = [
   { id: "tags", enabled: true },
 ];
 
+/** Home uses the same defaults (including author card). */
+export const DEFAULT_SIDEBAR_HOME: SidebarBlockConfig[] = DEFAULT_SIDEBAR_BLOCKS
+  .map((block) => ({ ...block }));
+
+/** Static pages: no author byline by default. */
+export const DEFAULT_SIDEBAR_PAGE: SidebarBlockConfig[] = [
+  { id: "author", enabled: false },
+  { id: "calendar", enabled: true },
+  { id: "recent", enabled: true },
+  { id: "tags", enabled: true },
+];
+
 const KNOWN = new Set<string>(SIDEBAR_BLOCK_IDS);
 
 /** Merge stored order with defaults so new block ids still appear. */
 export function normalizeSidebarBlocks(
   blocks?: SidebarBlockConfig[] | null,
+  fallback: SidebarBlockConfig[] = DEFAULT_SIDEBAR_BLOCKS,
 ): SidebarBlockConfig[] {
   const seen = new Set<SidebarBlockId>();
   const result: SidebarBlockConfig[] = [];
@@ -36,8 +49,8 @@ export function normalizeSidebarBlocks(
     seen.add(block.id);
     result.push({ id: block.id, enabled: !!block.enabled });
   }
-  for (const fallback of DEFAULT_SIDEBAR_BLOCKS) {
-    if (!seen.has(fallback.id)) result.push({ ...fallback });
+  for (const item of fallback) {
+    if (!seen.has(item.id)) result.push({ ...item });
   }
   return result;
 }
@@ -45,6 +58,7 @@ export function normalizeSidebarBlocks(
 /** Parse the hidden JSON field from the settings form. */
 export function parseSidebarBlocks(
   raw: string,
+  fallback: SidebarBlockConfig[] = DEFAULT_SIDEBAR_BLOCKS,
 ): SidebarBlockConfig[] | string {
   let parsed: unknown;
   try {
@@ -69,5 +83,5 @@ export function parseSidebarBlocks(
       enabled: (item as SidebarBlockConfig).enabled,
     });
   }
-  return normalizeSidebarBlocks(blocks);
+  return normalizeSidebarBlocks(blocks, fallback);
 }

@@ -120,10 +120,12 @@ export interface Settings {
   /** Math captcha on the public contact form (default on). */
   contactCaptchaEnabled: boolean;
   /**
-   * Public sidebar widgets (author, calendar, recent, tags):
+   * Public sidebar widgets per surface (home / post / page):
    * visibility + display order. TOC on post pages stays automatic.
    */
-  sidebarBlocks: SidebarBlockConfig[];
+  sidebarHome: SidebarBlockConfig[];
+  sidebarPost: SidebarBlockConfig[];
+  sidebarPage: SidebarBlockConfig[];
 }
 
 /** Configurable public sidebar widgets (not including per-post TOC). */

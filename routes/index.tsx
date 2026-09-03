@@ -7,7 +7,8 @@ import { listPublishedPosts, collectPostDays } from "@/lib/posts.ts";
 import { listTagsWithCounts } from "@/lib/tags.ts";
 import { getNavLinks } from "@/lib/menu.ts";
 import { getSettings } from "@/lib/settings.ts";
-import { getAuthorsMap } from "@/lib/users.ts";
+import { getAuthorsMap, getAuthor } from "@/lib/users.ts";
+import { ADMIN_USERNAME } from "@/lib/auth.ts";
 import { canonicalUrl } from "@/lib/seo.ts";
 import { parseCalendarMonth } from "@/utils/date.ts";
 import { PublicLayout } from "@/components/PublicLayout.tsx";
@@ -23,11 +24,12 @@ import {
 } from "@/lib/public-ui.ts";
 
 export const handler = define.handlers(async (ctx) => {
-  const [settings, allPosts, tags, navLinks] = await Promise.all([
+  const [settings, allPosts, tags, navLinks, siteAuthor] = await Promise.all([
     getSettings(),
     listPublishedPosts(),
     listTagsWithCounts(),
     getNavLinks(),
+    getAuthor(ADMIN_USERNAME),
   ]);
   const page = Math.max(1, Number(ctx.url.searchParams.get("page")) || 1);
   const perPage = settings.postsPerPage;
@@ -44,6 +46,7 @@ export const handler = define.handlers(async (ctx) => {
       recentPosts: allPosts.slice(0, 5),
       tags,
       authors,
+      siteAuthor,
       postDays: collectPostDays(allPosts),
       calendarMonth: parseCalendarMonth(ctx.url.searchParams.get("cal")),
       isAdmin: !!ctx.state.user,
@@ -61,6 +64,7 @@ export default define.page<typeof handler>(function Home({ data }) {
     recentPosts,
     tags,
     authors,
+    siteAuthor,
     postDays,
     calendarMonth,
     isAdmin,
@@ -118,9 +122,10 @@ export default define.page<typeof handler>(function Home({ data }) {
           <Sidebar
             recentPosts={recentPosts}
             tags={tags}
+            author={siteAuthor}
             postDays={postDays}
             calendarMonth={calendarMonth}
-            sidebarBlocks={settings.sidebarBlocks}
+            sidebarBlocks={settings.sidebarHome}
           />
         </main>
       </PublicLayout>

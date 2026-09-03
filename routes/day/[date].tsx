@@ -11,7 +11,8 @@ import {
 import { listTagsWithCounts } from "@/lib/tags.ts";
 import { getNavLinks } from "@/lib/menu.ts";
 import { getSettings } from "@/lib/settings.ts";
-import { getAuthorsMap } from "@/lib/users.ts";
+import { getAuthorsMap, getAuthor } from "@/lib/users.ts";
+import { ADMIN_USERNAME } from "@/lib/auth.ts";
 import { canonicalUrl } from "@/lib/seo.ts";
 import { formatDateLong, parseCalendarMonth } from "@/utils/date.ts";
 import { PublicLayout } from "@/components/PublicLayout.tsx";
@@ -28,13 +29,15 @@ import {
 export const handler = define.handlers(async (ctx) => {
   const day = ctx.params.date;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) throw new HttpError(404);
-  const [settings, posts, allPosts, tags, navLinks] = await Promise.all([
-    getSettings(),
-    listPostsOnDay(day),
-    listPublishedPosts(),
-    listTagsWithCounts(),
-    getNavLinks(),
-  ]);
+  const [settings, posts, allPosts, tags, navLinks, siteAuthor] =
+    await Promise.all([
+      getSettings(),
+      listPostsOnDay(day),
+      listPublishedPosts(),
+      listTagsWithCounts(),
+      getNavLinks(),
+      getAuthor(ADMIN_USERNAME),
+    ]);
   const authors = await getAuthorsMap(posts.map((p) => p.authorId));
   return {
     data: {
@@ -43,6 +46,7 @@ export const handler = define.handlers(async (ctx) => {
       settings,
       navLinks,
       authors,
+      siteAuthor,
       recentPosts: allPosts.slice(0, 5),
       tags,
       postDays: collectPostDays(allPosts),
@@ -62,6 +66,7 @@ export default define.page<typeof handler>(function DayArchive({ data }) {
     settings,
     navLinks,
     authors,
+    siteAuthor,
     recentPosts,
     tags,
     postDays,
@@ -116,10 +121,11 @@ export default define.page<typeof handler>(function DayArchive({ data }) {
           <Sidebar
             recentPosts={recentPosts}
             tags={tags}
+            author={siteAuthor}
             postDays={postDays}
             calendarMonth={calendarMonth}
             selectedDay={day}
-            sidebarBlocks={settings.sidebarBlocks}
+            sidebarBlocks={settings.sidebarHome}
           />
         </main>
       </PublicLayout>

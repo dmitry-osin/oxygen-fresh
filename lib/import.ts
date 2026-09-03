@@ -106,8 +106,29 @@ function validateSettings(item: unknown): Settings | null {
     ? {
       ...DEFAULT_SETTINGS,
       ...(item as unknown as Settings),
-      sidebarBlocks: normalizeSidebarBlocks(
-        (item as { sidebarBlocks?: Settings["sidebarBlocks"] }).sidebarBlocks,
+      sidebarHome: normalizeSidebarBlocks(
+        (item as {
+          sidebarHome?: Settings["sidebarHome"];
+          sidebarBlocks?: Settings["sidebarHome"];
+        }).sidebarHome ??
+          (item as { sidebarBlocks?: Settings["sidebarHome"] }).sidebarBlocks,
+        DEFAULT_SETTINGS.sidebarHome,
+      ),
+      sidebarPost: normalizeSidebarBlocks(
+        (item as {
+          sidebarPost?: Settings["sidebarPost"];
+          sidebarBlocks?: Settings["sidebarPost"];
+        }).sidebarPost ??
+          (item as { sidebarBlocks?: Settings["sidebarPost"] }).sidebarBlocks,
+        DEFAULT_SETTINGS.sidebarPost,
+      ),
+      sidebarPage: normalizeSidebarBlocks(
+        (item as {
+          sidebarPage?: Settings["sidebarPage"];
+          sidebarBlocks?: Settings["sidebarPage"];
+        }).sidebarPage ??
+          (item as { sidebarBlocks?: Settings["sidebarPage"] }).sidebarBlocks,
+        DEFAULT_SETTINGS.sidebarPage,
       ),
     }
     : null;

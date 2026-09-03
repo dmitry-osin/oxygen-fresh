@@ -110,7 +110,7 @@ export default define.page<typeof handler>(function StaticPage({ data }) {
                 tags={tags}
                 postDays={postDays}
                 calendarMonth={calendarMonth}
-                sidebarBlocks={settings.sidebarBlocks}
+                sidebarBlocks={settings.sidebarPage}
               />
             </main>
           )}

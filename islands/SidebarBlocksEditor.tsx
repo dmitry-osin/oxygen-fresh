@@ -12,7 +12,16 @@ import {
 } from "@/lib/admin-ui.ts";
 
 export default function SidebarBlocksEditor(
-  { blocks }: { blocks: SidebarBlockConfig[] },
+  {
+    blocks,
+    name,
+    description,
+  }: {
+    blocks: SidebarBlockConfig[];
+    /** Form field name for the JSON payload. */
+    name: string;
+    description?: string;
+  },
 ) {
   const ordered = useSignal(blocks);
   const dragging = useSignal(-1);
@@ -36,14 +45,10 @@ export default function SidebarBlocksEditor(
 
   return (
     <div class="space-y-3">
-      <p class={ADMIN_TYPE_MUTED}>
-        Drag to reorder. Uncheck to hide a block on the public sidebar. The
-        table of contents on post pages is always shown when the post has
-        headings.
-      </p>
+      {description && <p class={ADMIN_TYPE_MUTED}>{description}</p>}
       <input
         type="hidden"
-        name="sidebarBlocks"
+        name={name}
         value={JSON.stringify(ordered.value)}
       />
       <ul class="space-y-2">
