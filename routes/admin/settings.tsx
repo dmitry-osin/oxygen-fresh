@@ -7,7 +7,16 @@ import { define } from "@/utils.ts";
 import { getSettings, saveSettings } from "@/lib/settings.ts";
 import { saveMediaFile } from "@/lib/media.ts";
 import { SocialLinksFields } from "@/components/SocialLinksFields.tsx";
+import FilePickField from "@/islands/FilePickField.tsx";
 import type { Settings } from "@/types/index.ts";
+import {
+  ADMIN_BTN_PRIMARY,
+  ADMIN_INPUT,
+  ADMIN_TYPE_ERROR,
+  ADMIN_TYPE_LABEL,
+  ADMIN_TYPE_SUCCESS,
+  AdminPage,
+} from "@/components/AdminPage.tsx";
 
 interface SettingsData {
   settings: Settings;
@@ -15,9 +24,8 @@ interface SettingsData {
   saved: boolean;
 }
 
-const INPUT =
-  "w-full border border-gray-300 dark:border-gray-700 dark:bg-gray-900 rounded px-3 py-2";
-const LABEL = "block text-sm font-medium mb-1";
+const INPUT = ADMIN_INPUT;
+const LABEL = ADMIN_TYPE_LABEL;
 const ACCEPT_IMAGES = "image/png,image/jpeg,image/webp,image/gif,image/svg+xml";
 const THEMES: Settings["theme"][] = ["light", "dark", "system"];
 
@@ -110,6 +118,7 @@ async function parseSettingsForm(
     settings: {
       siteName,
       siteDescription: String(form.get("siteDescription") ?? "").trim(),
+      footerDescription: String(form.get("footerDescription") ?? "").trim(),
       logoUrl: uploads.logoUrl,
       faviconUrl: uploads.faviconUrl,
       defaultMetaTitle: text("defaultMetaTitle"),
@@ -147,16 +156,20 @@ export const handler = define.handlers({
 export default define.page<typeof handler>(function SettingsPage({ data }) {
   const { settings, error, saved } = data;
   return (
-    <div class="px-4 py-8 mx-auto max-w-3xl">
+    <AdminPage
+      title="Settings"
+      description="Site identity, footer text, SEO defaults, social links and pagination."
+    >
       <Head>
         <title>Settings - Admin</title>
       </Head>
-      <h1 class="text-2xl font-bold mb-6">Settings</h1>
-      {saved && (
-        <p class="text-green-700 dark:text-green-400 mb-4">Settings saved.</p>
-      )}
-      {error && <p class="text-red-600 mb-4">{error}</p>}
-      <form method="post" enctype="multipart/form-data" class="space-y-5">
+      {saved && <p class={`${ADMIN_TYPE_SUCCESS} mb-4`}>Settings saved.</p>}
+      {error && <p class={`${ADMIN_TYPE_ERROR} mb-4`}>{error}</p>}
+      <form
+        method="post"
+        enctype="multipart/form-data"
+        class="space-y-5"
+      >
         <label class="block">
           <span class={LABEL}>Site name *</span>
           <input
@@ -176,29 +189,40 @@ export default define.page<typeof handler>(function SettingsPage({ data }) {
             {settings.siteDescription}
           </textarea>
         </label>
-        <div class="flex gap-4 flex-wrap">
-          <label class="block">
+        <label class="block">
+          <span class={LABEL}>Footer description</span>
+          <textarea
+            name="footerDescription"
+            rows={2}
+            class={INPUT}
+            placeholder="Short line shown under the copyright in the public footer"
+          >
+            {settings.footerDescription}
+          </textarea>
+        </label>
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div>
             <span class={LABEL}>Logo</span>
-            {settings.logoUrl && (
-              <img
-                src={settings.logoUrl}
-                alt="Current logo"
-                class="h-8 mb-1"
-              />
-            )}
-            <input type="file" name="logo" accept={ACCEPT_IMAGES} />
-          </label>
-          <label class="block">
+            <FilePickField
+              name="logo"
+              accept={ACCEPT_IMAGES}
+              buttonLabel="Choose logo"
+              hint="PNG, JPG, WebP, GIF or SVG"
+              imagePreview
+              currentImageUrl={settings.logoUrl}
+            />
+          </div>
+          <div>
             <span class={LABEL}>Favicon (PNG recommended)</span>
-            {settings.faviconUrl && (
-              <img
-                src={settings.faviconUrl}
-                alt="Current favicon"
-                class="h-8 w-8 mb-1"
-              />
-            )}
-            <input type="file" name="favicon" accept={ACCEPT_IMAGES} />
-          </label>
+            <FilePickField
+              name="favicon"
+              accept={ACCEPT_IMAGES}
+              buttonLabel="Choose favicon"
+              hint="PNG, JPG, WebP, GIF or SVG"
+              imagePreview
+              currentImageUrl={settings.faviconUrl}
+            />
+          </div>
         </div>
         <label class="block">
           <span class={LABEL}>Default meta title</span>
@@ -217,7 +241,7 @@ export default define.page<typeof handler>(function SettingsPage({ data }) {
           />
         </label>
         <SocialLinksFields links={settings.socialLinks} />
-        <div class="flex gap-4 flex-wrap">
+        <div class="grid gap-4 sm:grid-cols-2 max-w-xl">
           <label class="block">
             <span class={LABEL}>Theme</span>
             <select name="theme" class={INPUT}>
@@ -240,13 +264,10 @@ export default define.page<typeof handler>(function SettingsPage({ data }) {
             />
           </label>
         </div>
-        <button
-          type="submit"
-          class="bg-gray-900 text-white rounded px-4 py-2 font-medium dark:bg-gray-100 dark:text-gray-900"
-        >
+        <button type="submit" class={ADMIN_BTN_PRIMARY}>
           Save settings
         </button>
       </form>
-    </div>
+    </AdminPage>
   );
 });

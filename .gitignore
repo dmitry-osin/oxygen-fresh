@@ -17,3 +17,9 @@ data/*
 static/uploads/*
 !static/uploads/.gitkeep
 
+# Windows reserved device names accidentally created by shells (curl -o NUL, etc.)
+/NUL
+/nul
+/CON
+/con
+

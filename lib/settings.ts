@@ -9,6 +9,7 @@ import type { Settings } from "@/types/index.ts";
 export const DEFAULT_SETTINGS: Settings = {
   siteName: "oxygen-blog",
   siteDescription: "",
+  footerDescription: "",
   socialLinks: [],
   theme: "system",
   postsPerPage: 10,

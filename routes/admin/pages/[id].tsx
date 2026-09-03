@@ -1,4 +1,5 @@
-// Page editor. Pages are always published once created; no status/tags.
+// Page editor chrome matching the Post editor (header + grouped form).
+// Pages are always live once created; no draft/history tabs.
 // Source: ai/requirements.md F2, UI rules 5.1.
 
 import { Head } from "fresh/runtime";
@@ -10,12 +11,17 @@ import {
   type PageInput,
   updatePage,
 } from "@/lib/pages.ts";
-import ConfirmDelete from "@/islands/ConfirmDelete.tsx";
-import SlugField from "@/islands/SlugField.tsx";
-import MarkdownEditor from "@/islands/MarkdownEditor.tsx";
-
-const inputCls = "w-full border border-gray-300 rounded px-3 py-2";
-const labelCls = "block text-sm font-medium mb-1";
+import { ConfirmDeleteTrigger } from "@/components/ConfirmDeleteTrigger.tsx";
+import { PageForm } from "@/components/PageForm.tsx";
+import {
+  ADMIN_BTN_ROW,
+  ADMIN_CARD,
+  ADMIN_TYPE_BACK,
+  ADMIN_TYPE_BADGE,
+  ADMIN_TYPE_ERROR,
+  ADMIN_TYPE_MUTED,
+  ADMIN_TYPE_PAGE_TITLE,
+} from "@/components/AdminPage.tsx";
 
 function parsePageInput(form: FormData): PageInput {
   const get = (name: string) => String(form.get(name) ?? "").trim();
@@ -55,114 +61,45 @@ export const handler = define.handlers({
 
 export default define.page<typeof handler>(function PageEditor({ data }) {
   const { page, error } = data;
+  const menuTone = page.showInMenu
+    ? "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300"
+    : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300";
+
   return (
-    <div class="px-4 py-8 mx-auto max-w-3xl">
+    <div class="w-full px-6 py-8 lg:px-10">
       <Head>
         <title>Edit page: {page.title} - Admin</title>
       </Head>
-      <p class="mb-4">
-        <a href="/admin/pages" class="text-sm text-gray-600">
-          &larr; All pages
+
+      <div class="flex flex-wrap items-start justify-between gap-4 mb-6">
+        <div class="min-w-0">
+          <a href="/admin/pages" class={ADMIN_TYPE_BACK}>
+            &larr; All pages
+          </a>
+          <div class="flex flex-wrap items-center gap-3 mt-2">
+            <h1 class={`${ADMIN_TYPE_PAGE_TITLE} truncate`}>{page.title}</h1>
+            <span class={`${ADMIN_TYPE_BADGE} ${menuTone}`}>
+              {page.showInMenu ? "in menu" : "hidden"}
+            </span>
+          </div>
+          <p class={`${ADMIN_TYPE_MUTED} mt-1`}>/page/{page.slug}</p>
+        </div>
+        <a
+          href={`/page/${page.slug}`}
+          target="_blank"
+          rel="noopener"
+          class={ADMIN_BTN_ROW}
+        >
+          View
         </a>
-      </p>
-      <h1 class="text-2xl font-bold mb-6">{page.title}</h1>
-      {error && <p class="text-red-600 mb-4">{error}</p>}
-      <form method="post" class="space-y-4">
-        <div>
-          <label class={labelCls} for="title">Title</label>
-          <input
-            id="title"
-            name="title"
-            type="text"
-            required
-            value={page.title}
-            class={inputCls}
-          />
-        </div>
-        <div>
-          <label class={labelCls}>Slug</label>
-          <SlugField
-            initialValue={page.slug}
-            excludeId={page.id}
-            type="page"
-          />
-          <p class="text-amber-700 text-sm mt-1">
-            Warning: changing the slug breaks existing URLs.
-          </p>
-        </div>
-        <div>
-          <label class={labelCls} for="content">Content (Markdown)</label>
-          <MarkdownEditor initialContent={page.content} />
-        </div>
-        <div>
-          <label class={labelCls} for="template">Template</label>
-          <select id="template" name="template" class={inputCls}>
-            <option value="default" selected={page.template === "default"}>
-              default (with sidebar)
-            </option>
-            <option
-              value="full-width"
-              selected={page.template === "full-width"}
-            >
-              full-width
-            </option>
-          </select>
-        </div>
-        <div class="flex items-center gap-4">
-          <label class="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              name="showInMenu"
-              checked={page.showInMenu}
-            />
-            Show in menu
-          </label>
-          <label class="flex items-center gap-2 text-sm">
-            Menu order
-            <input
-              type="number"
-              name="menuOrder"
-              value={page.menuOrder}
-              class="w-24 border border-gray-300 rounded px-3 py-2"
-            />
-          </label>
-        </div>
-        <div>
-          <label class={labelCls} for="metaTitle">Meta title (SEO)</label>
-          <input
-            id="metaTitle"
-            name="metaTitle"
-            type="text"
-            value={page.metaTitle ?? ""}
-            class={inputCls}
-          />
-        </div>
-        <div>
-          <label class={labelCls} for="metaDescription">
-            Meta description (SEO)
-          </label>
-          <textarea
-            id="metaDescription"
-            name="metaDescription"
-            rows={2}
-            class={inputCls}
-          >
-            {page.metaDescription ?? ""}
-          </textarea>
-        </div>
-        <div class="flex gap-2 pt-2">
-          <button
-            type="submit"
-            name="action"
-            value="save"
-            class="bg-gray-900 text-white rounded px-4 py-2 font-medium"
-          >
-            Save
-          </button>
-        </div>
-      </form>
-      <div class="mt-6 pt-6 border-t">
-        <ConfirmDelete itemName={page.title} />
+      </div>
+
+      {error && <p class={`${ADMIN_TYPE_ERROR} mb-4`}>{error}</p>}
+
+      <PageForm page={page} />
+
+      <div class={`${ADMIN_CARD} flex flex-wrap items-center gap-2 mt-6`}>
+        <ConfirmDeleteTrigger itemName={page.title} />
       </div>
     </div>
   );

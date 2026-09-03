@@ -1,14 +1,28 @@
-// Admin theme toggle (F12): cycles system -> light -> dark, applies the
-// .dark class on <html> immediately and persists the choice to settings.
-// Source: ai/requirements.md 5.1 (system-aware default, toggle), tech-dep
-// "Ручной переключатель темы админки".
+// Admin theme control (F12): System / Light / Dark as icon buttons
+// (same visual language as the public PublicThemeToggle).
 
 import { useEffect } from "preact/hooks";
 import { useSignal } from "@preact/signals";
+import { Monitor, Moon, Sun } from "lucide-preact";
 import type { Settings } from "@/types/index.ts";
 
 type Theme = Settings["theme"];
-const CYCLE: Theme[] = ["system", "light", "dark"];
+
+const OPTIONS: {
+  value: Theme;
+  label: string;
+  Icon: typeof Sun;
+}[] = [
+  { value: "system", label: "System", Icon: Monitor },
+  { value: "light", label: "Light", Icon: Sun },
+  { value: "dark", label: "Dark", Icon: Moon },
+];
+
+const BTN =
+  "inline-flex items-center justify-center rounded-md p-1.5 transition-colors";
+const BTN_IDLE =
+  "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800";
+const BTN_ACTIVE = "bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900";
 
 function isDarkActive(theme: Theme): boolean {
   const systemDark = matchMedia("(prefers-color-scheme: dark)").matches;
@@ -18,7 +32,6 @@ function isDarkActive(theme: Theme): boolean {
 export default function ThemeToggle({ theme }: { theme: Theme }) {
   const current = useSignal<Theme>(theme);
 
-  // The server cannot resolve "system"; align the class on hydration.
   useEffect(() => {
     document.documentElement.classList.toggle("dark", isDarkActive(theme));
   }, [theme]);
@@ -30,18 +43,31 @@ export default function ThemeToggle({ theme }: { theme: Theme }) {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ theme: next }),
-    }).catch(() => {}); // theme still applies locally if the save fails
+    }).catch(() => {});
   }
 
   return (
-    <button
-      type="button"
-      class="text-sm text-gray-500 hover:text-gray-900 dark:hover:text-gray-100"
-      onClick={() =>
-        setTheme(CYCLE[(CYCLE.indexOf(current.value) + 1) % CYCLE.length])}
-      title="Cycle theme: system, light, dark"
+    <div
+      class="inline-flex items-center gap-0.5"
+      role="group"
+      aria-label="Admin theme"
     >
-      Theme: {current.value}
-    </button>
+      {OPTIONS.map(({ value, label, Icon }) => {
+        const active = current.value === value;
+        return (
+          <button
+            key={value}
+            type="button"
+            class={`${BTN} ${active ? BTN_ACTIVE : BTN_IDLE}`}
+            aria-label={label}
+            aria-pressed={active}
+            title={label}
+            onClick={() => setTheme(value)}
+          >
+            <Icon size={18} aria-hidden="true" />
+          </button>
+        );
+      })}
+    </div>
   );
 }

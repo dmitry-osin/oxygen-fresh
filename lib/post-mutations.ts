@@ -5,6 +5,7 @@ import { addToList, kv, KvKeys, removeFromList } from "./kv.ts";
 import type { Post, PostSnapshot } from "@/types/index.ts";
 import {
   getPostById,
+  invalidatePostSummaryCache,
   isSlugTaken,
   type PostInput,
   type SaveResult,
@@ -53,6 +54,7 @@ async function commitPost(post: Post, previous?: Post): Promise<void> {
   op.set(postKey(post), post);
   syncTagIndex(op, post, previous);
   await op.commit();
+  invalidatePostSummaryCache();
 }
 
 /** Insert a brand-new post object and register its id. */
@@ -178,6 +180,7 @@ export async function deletePost(id: string): Promise<boolean> {
   syncTagIndex(op, { ...post, tags: [] }, post);
   op.delete(KvKeys.postVersionMeta(post.id));
   await op.commit();
+  invalidatePostSummaryCache();
   await removeFromList(KvKeys.postIds(), id);
   await unindexPost(id);
   const iter = kv.list({ prefix: KvKeys.postVersionPrefix(id) });

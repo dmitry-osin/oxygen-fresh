@@ -1,16 +1,17 @@
-// Social links field group for the settings form (F12): one row per
+// Social links field group for settings / profile forms: one row per
 // existing link plus three empty rows, all submitted as parallel
 // socialPlatform / socialUrl arrays - no client JS needed.
 
-import type { Settings } from "@/types/index.ts";
+import { ADMIN_INPUT, ADMIN_TYPE_LABEL } from "@/lib/admin-ui.ts";
 
-const INPUT =
-  "border border-gray-300 dark:border-gray-700 dark:bg-gray-900 rounded px-3 py-2";
+const INPUT = ADMIN_INPUT;
 
 const EMPTY_ROWS = 3;
 
+type SocialLink = { platform: string; url: string };
+
 export function SocialLinksFields(
-  { links }: { links: Settings["socialLinks"] },
+  { links }: { links: SocialLink[] },
 ) {
   const rows = [
     ...links,
@@ -18,7 +19,7 @@ export function SocialLinksFields(
   ];
   return (
     <div>
-      <span class="block text-sm font-medium mb-1">
+      <span class={ADMIN_TYPE_LABEL}>
         Social links (platform and URL per row)
       </span>
       {rows.map((link, index) => (

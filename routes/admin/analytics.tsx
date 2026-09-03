@@ -10,6 +10,15 @@ import { listPages } from "@/lib/pages.ts";
 import { listTags } from "@/lib/tags.ts";
 import { DailyViewsChart } from "@/components/DailyViewsChart.tsx";
 import type { Page, Post } from "@/types/index.ts";
+import {
+  ADMIN_CARD,
+  ADMIN_TYPE_CARD_TITLE,
+  ADMIN_TYPE_MUTED,
+  ADMIN_TYPE_SECTION,
+  ADMIN_TYPE_STAT,
+  ADMIN_TYPE_STAT_LABEL,
+  AdminPage,
+} from "@/components/AdminPage.tsx";
 
 export interface TopEntry {
   title: string;
@@ -60,19 +69,19 @@ export const handler = define.handlers({
 
 function StatCard({ label, value }: { label: string; value: number }) {
   return (
-    <div class="border border-gray-200 dark:border-gray-700 rounded p-4">
-      <p class="text-sm text-gray-500">{label}</p>
-      <p class="text-2xl font-bold">{value}</p>
+    <div class={ADMIN_CARD}>
+      <p class={ADMIN_TYPE_STAT_LABEL}>{label}</p>
+      <p class={`${ADMIN_TYPE_STAT} mt-1`}>{value}</p>
     </div>
   );
 }
 
 function TopList({ title, entries }: { title: string; entries: TopEntry[] }) {
   return (
-    <div class="flex-1 min-w-64">
-      <h2 class="text-lg font-bold mb-3">{title}</h2>
+    <div class={`${ADMIN_CARD} flex-1 min-w-64`}>
+      <h2 class={`${ADMIN_TYPE_CARD_TITLE} mb-3`}>{title}</h2>
       {entries.length === 0
-        ? <p class="text-gray-500 text-sm">No views yet.</p>
+        ? <p class={ADMIN_TYPE_MUTED}>No views yet.</p>
         : (
           <ol class="space-y-1">
             {entries.map((entry, index) => (
@@ -94,23 +103,24 @@ function TopList({ title, entries }: { title: string; entries: TopEntry[] }) {
 
 export default define.page<typeof handler>(function AnalyticsPage({ data }) {
   return (
-    <div class="px-4 py-8 mx-auto max-w-5xl">
+    <AdminPage title="Analytics">
       <Head>
         <title>Analytics - Admin</title>
       </Head>
-      <h1 class="text-2xl font-bold mb-6">Analytics</h1>
-      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <StatCard label="Posts" value={data.postCount} />
         <StatCard label="Pages" value={data.pageCount} />
         <StatCard label="Tags" value={data.tagCount} />
         <StatCard label="Total views" value={data.totalViews} />
       </div>
-      <h2 class="text-lg font-bold mb-3">Views, last 7 days</h2>
-      <DailyViewsChart days={data.daily} />
-      <div class="flex flex-wrap gap-10 mt-10">
+      <h2 class={`${ADMIN_TYPE_SECTION} mb-3`}>Views, last 7 days</h2>
+      <div class={`${ADMIN_CARD} mb-10`}>
+        <DailyViewsChart days={data.daily} />
+      </div>
+      <div class="flex flex-wrap gap-6">
         <TopList title="Top posts" entries={data.topPosts} />
         <TopList title="Top pages" entries={data.topPages} />
       </div>
-    </div>
+    </AdminPage>
   );
 });

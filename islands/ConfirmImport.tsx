@@ -1,9 +1,16 @@
 // Import form with an explicit confirmation modal (F14 + UI 5.1:
-// destructive actions require confirmation). The modal submits the form
-// programmatically; Cancel just closes it.
+// destructive actions require confirmation). Uses FilePickField for a
+// clear upload affordance; the modal submits the form programmatically.
 
 import { useRef } from "preact/hooks";
 import { useSignal } from "@preact/signals";
+import FilePickField from "@/islands/FilePickField.tsx";
+import {
+  ADMIN_BTN_DANGER,
+  ADMIN_BTN_SECONDARY,
+  ADMIN_TYPE_MODAL_TITLE,
+  ADMIN_TYPE_MUTED,
+} from "@/lib/admin-ui.ts";
 
 export default function ConfirmImport() {
   const open = useSignal(false);
@@ -18,39 +25,37 @@ export default function ConfirmImport() {
         e.preventDefault();
         open.value = true;
       }}
+      class="space-y-3"
     >
-      <input
-        type="file"
+      <FilePickField
         name="file"
         accept="application/json,.json"
         required
-        class="block w-full text-sm border border-gray-300 dark:border-gray-700 dark:bg-gray-900 rounded px-3 py-2 mb-3"
+        buttonLabel="Choose JSON export"
+        hint="Previously downloaded blog-export-*.json"
       />
-      <button
-        type="submit"
-        class="bg-red-600 text-white rounded px-4 py-2 text-sm font-medium"
-      >
+      <button type="submit" class={ADMIN_BTN_DANGER}>
         Upload and replace
       </button>
       {open.value && (
         <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div class="bg-white dark:bg-gray-900 rounded-lg p-6 w-full max-w-sm shadow-lg">
-            <h2 class="text-lg font-bold mb-2">Replace all data?</h2>
-            <p class="text-sm text-gray-600 dark:text-gray-400 mb-6">
+            <h2 class={`${ADMIN_TYPE_MODAL_TITLE} mb-2`}>Replace all data?</h2>
+            <p class={`${ADMIN_TYPE_MUTED} mb-6`}>
               Every post, page, tag, menu item, redirect and site setting will
               be replaced by the uploaded file. This cannot be undone.
             </p>
             <div class="flex gap-2 justify-end">
               <button
                 type="button"
-                class="border border-gray-300 dark:border-gray-700 rounded px-3 py-2 text-sm"
+                class={ADMIN_BTN_SECONDARY}
                 onClick={() => (open.value = false)}
               >
                 Cancel
               </button>
               <button
                 type="button"
-                class="bg-red-600 text-white rounded px-3 py-2 text-sm font-medium"
+                class={ADMIN_BTN_DANGER}
                 onClick={() => form.current?.submit()}
               >
                 Import

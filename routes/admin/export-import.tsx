@@ -13,6 +13,16 @@ import {
   parseWordPressXml,
 } from "@/lib/import-external.ts";
 import ConfirmImport from "@/islands/ConfirmImport.tsx";
+import FilePickField from "@/islands/FilePickField.tsx";
+import {
+  ADMIN_BTN_PRIMARY,
+  ADMIN_CARD,
+  ADMIN_TYPE_CARD_TITLE,
+  ADMIN_TYPE_ERROR,
+  ADMIN_TYPE_MUTED,
+  ADMIN_TYPE_SUCCESS,
+  AdminPage,
+} from "@/components/AdminPage.tsx";
 
 interface BackupData {
   imported: boolean;
@@ -89,72 +99,69 @@ export const handler = define.handlers({
 
 export default define.page<typeof handler>(function BackupPage({ data }) {
   return (
-    <div class="px-4 py-8 mx-auto max-w-3xl">
+    <AdminPage title="Export / Import">
       <Head>
         <title>Backup - Admin</title>
       </Head>
-      <h1 class="text-2xl font-bold mb-6">Export / Import</h1>
       {data.imported && (
-        <p class="text-green-700 dark:text-green-400 mb-4">
+        <p class={`${ADMIN_TYPE_SUCCESS} mb-4`}>
           Data imported successfully.
         </p>
       )}
       {data.drafts > 0 && (
-        <p class="text-green-700 dark:text-green-400 mb-4">
+        <p class={`${ADMIN_TYPE_SUCCESS} mb-4`}>
           Imported {data.drafts} draft{data.drafts === 1 ? "" : "s"}{" "}
           from the external file.
         </p>
       )}
-      {data.error && <p class="text-red-600 mb-4">{data.error}</p>}
+      {data.error && <p class={`${ADMIN_TYPE_ERROR} mb-4`}>{data.error}</p>}
 
-      <section class="mb-10">
-        <h2 class="text-lg font-bold mb-2">Export</h2>
-        <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">
-          Downloads every post, page, tag, menu item, redirect and site setting
-          as a single JSON file.
-        </p>
-        <a
-          href="/admin/api/export"
-          class="inline-block bg-gray-900 text-white rounded px-4 py-2 text-sm font-medium dark:bg-gray-100 dark:text-gray-900"
-        >
-          Download export
-        </a>
-      </section>
+      <div class="grid gap-6 lg:grid-cols-1 xl:grid-cols-3">
+        <section class={ADMIN_CARD}>
+          <h2 class={`${ADMIN_TYPE_CARD_TITLE} mb-2`}>Export</h2>
+          <p class={`${ADMIN_TYPE_MUTED} mb-4`}>
+            Downloads every post, page, tag, menu item, redirect and site
+            setting as a single JSON file.
+          </p>
+          <a href="/admin/api/export" class={ADMIN_BTN_PRIMARY}>
+            Download export
+          </a>
+        </section>
 
-      <section class="mb-10">
-        <h2 class="text-lg font-bold mb-2">Import (replace all data)</h2>
-        <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">
-          Upload a previously exported JSON file. It is validated first; the
-          replace step never runs on a malformed file. View counters and version
-          snapshots are kept.
-        </p>
-        <ConfirmImport />
-      </section>
+        <section class={ADMIN_CARD}>
+          <h2 class={`${ADMIN_TYPE_CARD_TITLE} mb-2`}>
+            Import (replace all data)
+          </h2>
+          <p class={`${ADMIN_TYPE_MUTED} mb-4`}>
+            Upload a previously exported JSON file. It is validated first; the
+            replace step never runs on a malformed file.
+          </p>
+          <ConfirmImport />
+        </section>
 
-      <section>
-        <h2 class="text-lg font-bold mb-2">Import from WordPress / Ghost</h2>
-        <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">
-          Upload a WordPress XML (WXR) or Ghost JSON export. Every post becomes
-          a draft; HTML content is converted to Markdown, tags are kept. Nothing
-          is published automatically.
-        </p>
-        <form method="post" enctype="multipart/form-data">
-          <input type="hidden" name="action" value="import-external" />
-          <input
-            type="file"
-            name="file"
-            accept=".xml,.json,application/xml,application/json"
-            required
-            class="block w-full text-sm border border-gray-300 dark:border-gray-700 dark:bg-gray-900 rounded px-3 py-2 mb-3"
-          />
-          <button
-            type="submit"
-            class="bg-gray-900 text-white rounded px-4 py-2 text-sm font-medium dark:bg-gray-100 dark:text-gray-900"
-          >
-            Import as drafts
-          </button>
-        </form>
-      </section>
-    </div>
+        <section class={ADMIN_CARD}>
+          <h2 class={`${ADMIN_TYPE_CARD_TITLE} mb-2`}>
+            Import from WordPress / Ghost
+          </h2>
+          <p class={`${ADMIN_TYPE_MUTED} mb-4`}>
+            Upload a WordPress XML (WXR) or Ghost JSON export. Every post
+            becomes a draft; nothing is published automatically.
+          </p>
+          <form method="post" enctype="multipart/form-data" class="space-y-3">
+            <input type="hidden" name="action" value="import-external" />
+            <FilePickField
+              name="file"
+              accept=".xml,.json,application/xml,application/json,text/xml"
+              required
+              buttonLabel="Choose WordPress / Ghost file"
+              hint="WordPress XML (WXR) or Ghost JSON export"
+            />
+            <button type="submit" class={ADMIN_BTN_PRIMARY}>
+              Import as drafts
+            </button>
+          </form>
+        </section>
+      </div>
+    </AdminPage>
   );
 });

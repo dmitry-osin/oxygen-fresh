@@ -88,6 +88,8 @@ export interface MenuItem {
 export interface Settings {
   siteName: string;
   siteDescription: string;
+  /** Short text shown in the public footer under the copyright. */
+  footerDescription: string;
   logoUrl?: string;
   faviconUrl?: string;
   defaultMetaTitle?: string;
@@ -105,6 +107,31 @@ export interface User {
   passwordHash: string;
   role: "admin" | "editor";
   createdAt: string;
+  /** Public profile (shown on post cards / author byline). */
+  firstName?: string;
+  lastName?: string;
+  bio?: string;
+  /** City / region / country */
+  location?: string;
+  website?: string;
+  /** Public contact email */
+  email?: string;
+  avatarUrl?: string;
+  socialLinks?: { platform: string; url: string }[];
+}
+
+/** Public-facing author fields (no credentials). */
+export interface AuthorProfile {
+  username: string;
+  displayName: string;
+  firstName?: string;
+  lastName?: string;
+  bio?: string;
+  location?: string;
+  website?: string;
+  email?: string;
+  avatarUrl?: string;
+  socialLinks: { platform: string; url: string }[];
 }
 
 export interface Session {

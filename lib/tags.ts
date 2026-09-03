@@ -3,7 +3,12 @@
 
 import { addToList, kv, KvKeys, removeFromList } from "./kv.ts";
 import type { Post, Tag } from "@/types/index.ts";
-import { DRAFT_PREFIX, getPostById, PUBLISHED_PREFIX } from "./posts.ts";
+import {
+  DRAFT_PREFIX,
+  getPostById,
+  listPublishedPosts,
+  PUBLISHED_PREFIX,
+} from "./posts.ts";
 import { slugify } from "@/utils/slugify.ts";
 import { isValidSlug } from "@/utils/validate.ts";
 import { nowIso } from "@/utils/date.ts";
@@ -26,6 +31,38 @@ export async function listTags(): Promise<Tag[]> {
   const iter = kv.list<Tag>({ prefix: TAGS_PREFIX });
   for await (const entry of iter) tags.push(entry.value);
   return tags.sort((a, b) => a.slug.localeCompare(b.slug));
+}
+
+/** Tag with how many published posts use it (for public tag clouds). */
+export interface TagWithCount {
+  slug: string;
+  name: string;
+  count: number;
+}
+
+/**
+ * Tags that appear on at least one published post, sorted by popularity.
+ * Counts come from published posts only (drafts ignored).
+ */
+export async function listTagsWithCounts(): Promise<TagWithCount[]> {
+  const [tags, posts] = await Promise.all([
+    listTags(),
+    listPublishedPosts(),
+  ]);
+  const counts = new Map<string, number>();
+  for (const post of posts) {
+    for (const slug of post.tags) {
+      counts.set(slug, (counts.get(slug) ?? 0) + 1);
+    }
+  }
+  return tags
+    .map((tag) => ({
+      slug: tag.slug,
+      name: tag.name,
+      count: counts.get(tag.slug) ?? 0,
+    }))
+    .filter((tag) => tag.count > 0)
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
 }
 
 export async function getTag(slug: string): Promise<Tag | null> {

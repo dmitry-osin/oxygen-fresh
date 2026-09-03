@@ -10,6 +10,11 @@ import { getVersion } from "@/lib/versions.ts";
 import { diffLines, type DiffRow } from "@/lib/diff.ts";
 import { formatDateTime } from "@/utils/date.ts";
 import type { PostSnapshot } from "@/types/index.ts";
+import {
+  ADMIN_TYPE_BACK,
+  ADMIN_TYPE_BODY,
+  ADMIN_TYPE_PAGE_TITLE,
+} from "@/components/AdminPage.tsx";
 
 interface DiffData {
   postId: string;
@@ -56,20 +61,20 @@ export const handler = define.handlers({
 export default define.page<typeof handler>(function VersionDiff({ data }) {
   const { postId, left, right, rows } = data;
   return (
-    <div class="px-4 py-8 mx-auto max-w-6xl">
+    <div class="w-full px-6 py-8 lg:px-10">
       <Head>
         <title>Version diff - Admin</title>
       </Head>
       <p class="mb-4">
         <a
           href={`/admin/posts/${postId}?tab=history`}
-          class="text-sm text-gray-600"
+          class={ADMIN_TYPE_BACK}
         >
           &larr; History
         </a>
       </p>
-      <h1 class="text-2xl font-bold mb-6">Version comparison</h1>
-      <div class="flex justify-between text-sm mb-4">
+      <h1 class={`${ADMIN_TYPE_PAGE_TITLE} mb-6`}>Version comparison</h1>
+      <div class={`flex justify-between ${ADMIN_TYPE_BODY} mb-4`}>
         <span class="text-red-700 dark:text-red-400">
           &minus; {formatDateTime(left.versionId)} — {left.title}
         </span>

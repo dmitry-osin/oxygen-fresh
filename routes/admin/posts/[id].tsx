@@ -1,4 +1,4 @@
-// Post editor: "Edit" tab (all fields visible) + "History" tab (F8).
+// Post editor: "Edit" tab (grouped form) + "History" tab (F8).
 // Source: ai/requirements.md F1, F8, UI rules 5.1.
 
 import { Head } from "fresh/runtime";
@@ -13,10 +13,29 @@ import {
 } from "@/lib/post-mutations.ts";
 import { listVersions } from "@/lib/versions.ts";
 import { PostForm } from "@/components/PostForm.tsx";
-import ConfirmDelete from "@/islands/ConfirmDelete.tsx";
+import { ConfirmDeleteTrigger } from "@/components/ConfirmDeleteTrigger.tsx";
 import { formatDateTime } from "@/utils/date.ts";
 import { slugify } from "@/utils/slugify.ts";
 import type { Post, PostSnapshot } from "@/types/index.ts";
+import {
+  ADMIN_BTN_ROW,
+  ADMIN_BTN_SECONDARY,
+  ADMIN_CARD,
+  ADMIN_TABLE,
+  ADMIN_TABLE_WRAP,
+  ADMIN_TD,
+  ADMIN_TD_MUTED,
+  ADMIN_TH,
+  ADMIN_THEAD,
+  ADMIN_TITLE_LINK,
+  ADMIN_TR,
+  ADMIN_TYPE_BACK,
+  ADMIN_TYPE_BADGE,
+  ADMIN_TYPE_BODY,
+  ADMIN_TYPE_ERROR,
+  ADMIN_TYPE_MUTED,
+  ADMIN_TYPE_PAGE_TITLE,
+} from "@/components/AdminPage.tsx";
 
 interface EditorData {
   post: Post;
@@ -112,11 +131,25 @@ export const handler = define.handlers({
   },
 });
 
+function statusTone(status: Post["status"]): string {
+  if (status === "published") {
+    return "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300";
+  }
+  if (status === "scheduled") {
+    return "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300";
+  }
+  return "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300";
+}
+
 function HistoryTable(
   { post, versions }: { post: Post; versions: PostSnapshot[] },
 ) {
   if (versions.length === 0) {
-    return <p class="text-gray-600">No published versions yet.</p>;
+    return (
+      <div class={ADMIN_CARD}>
+        <p class={ADMIN_TYPE_MUTED}>No published versions yet.</p>
+      </div>
+    );
   }
   const options = versions.map((v) => (
     <option key={v.versionId} value={v.versionId}>
@@ -124,61 +157,56 @@ function HistoryTable(
     </option>
   ));
   return (
-    <div>
-      <form
-        method="get"
-        action={`/admin/posts/${post.id}/versions/diff`}
-        class="flex flex-wrap items-center gap-2 mb-6"
-      >
-        <select
-          name="left"
-          class="border border-gray-300 rounded px-2 py-1 text-sm"
+    <div class="space-y-6">
+      <div class={ADMIN_CARD}>
+        <form
+          method="get"
+          action={`/admin/posts/${post.id}/versions/diff`}
+          class="flex flex-wrap items-center gap-2"
         >
-          {options}
-        </select>
-        <span class="text-sm text-gray-500">&harr;</span>
-        <select
-          name="right"
-          class="border border-gray-300 rounded px-2 py-1 text-sm"
-        >
-          {options}
-        </select>
-        <button
-          type="submit"
-          class="border border-gray-300 rounded px-3 py-1 text-sm font-medium"
-        >
-          Compare
-        </button>
-      </form>
-      <table class="w-full text-left border-collapse">
-        <thead>
-          <tr class="border-b">
-            <th class="py-2">Published at</th>
-            <th class="py-2">Title</th>
-            <th class="py-2">Tags</th>
-            <th class="py-2"></th>
-          </tr>
-        </thead>
-        <tbody>
-          {versions.map((v) => (
-            <tr key={v.versionId} class="border-b">
-              <td class="py-2 text-sm text-gray-600">
-                {formatDateTime(v.versionId)}
-              </td>
-              <td class="py-2">{v.title}</td>
-              <td class="py-2 text-sm text-gray-600">{v.tags.join(", ")}</td>
-              <td class="py-2">
-                <a
-                  href={`/admin/posts/${post.id}/versions/${v.versionId}`}
-                  class="underline text-sm"
-                >
-                  View
-                </a>
-              </td>
+          <select name="left" class={ADMIN_BTN_ROW}>
+            {options}
+          </select>
+          <span class={ADMIN_TYPE_MUTED}>&harr;</span>
+          <select name="right" class={ADMIN_BTN_ROW}>
+            {options}
+          </select>
+          <button type="submit" class={ADMIN_BTN_ROW}>
+            Compare
+          </button>
+        </form>
+      </div>
+      <div class={ADMIN_TABLE_WRAP}>
+        <table class={ADMIN_TABLE}>
+          <thead>
+            <tr class={ADMIN_THEAD}>
+              <th class={ADMIN_TH}>Published at</th>
+              <th class={ADMIN_TH}>Title</th>
+              <th class={ADMIN_TH}>Tags</th>
+              <th class={ADMIN_TH}></th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {versions.map((v) => (
+              <tr key={v.versionId} class={ADMIN_TR}>
+                <td class={`${ADMIN_TD_MUTED} whitespace-nowrap`}>
+                  {formatDateTime(v.versionId)}
+                </td>
+                <td class={ADMIN_TD}>{v.title}</td>
+                <td class={ADMIN_TD_MUTED}>{v.tags.join(", ")}</td>
+                <td class={ADMIN_TD}>
+                  <a
+                    href={`/admin/posts/${post.id}/versions/${v.versionId}`}
+                    class={ADMIN_TITLE_LINK}
+                  >
+                    View
+                  </a>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
@@ -186,54 +214,61 @@ function HistoryTable(
 export default define.page<typeof handler>(function PostEditor({ data }) {
   const { post, tab, versions, error } = data;
   const tabCls = (active: boolean) =>
-    `pb-2 ${
-      active ? "border-b-2 border-gray-900 font-medium" : "text-gray-600"
+    `px-3 py-2 rounded-md ${ADMIN_TYPE_BODY} ${
+      active
+        ? "bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900 font-medium"
+        : "text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800"
     }`;
   return (
-    <div class="px-4 py-8 mx-auto max-w-3xl">
+    <div class="w-full px-6 py-8 lg:px-10">
       <Head>
         <title>Edit: {post.title} - Admin</title>
       </Head>
-      <p class="mb-4">
-        <a href="/admin/posts" class="text-sm text-gray-600">
-          &larr; All posts
-        </a>
-      </p>
-      <div class="flex items-center justify-between mb-4">
-        <h1 class="text-2xl font-bold">{post.title}</h1>
-        <span class="text-xs uppercase tracking-wide bg-gray-200 rounded px-2 py-1">
-          {post.status}
-        </span>
+
+      <div class="flex flex-wrap items-start justify-between gap-4 mb-6">
+        <div class="min-w-0">
+          <a href="/admin/posts" class={ADMIN_TYPE_BACK}>
+            &larr; All posts
+          </a>
+          <div class="flex flex-wrap items-center gap-3 mt-2">
+            <h1 class={`${ADMIN_TYPE_PAGE_TITLE} truncate`}>{post.title}</h1>
+            <span class={`${ADMIN_TYPE_BADGE} ${statusTone(post.status)}`}>
+              {post.status}
+            </span>
+          </div>
+          <p class={`${ADMIN_TYPE_MUTED} mt-1`}>/{post.slug}</p>
+        </div>
+        <nav class="flex gap-1 p-1 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
+          <a href={`/admin/posts/${post.id}`} class={tabCls(tab === "edit")}>
+            Edit
+          </a>
+          <a
+            href={`/admin/posts/${post.id}?tab=history`}
+            class={tabCls(tab === "history")}
+          >
+            History
+          </a>
+        </nav>
       </div>
-      {error && <p class="text-red-600 mb-4">{error}</p>}
-      <nav class="flex gap-4 border-b mb-6">
-        <a href={`/admin/posts/${post.id}`} class={tabCls(tab === "edit")}>
-          Edit
-        </a>
-        <a
-          href={`/admin/posts/${post.id}?tab=history`}
-          class={tabCls(tab === "history")}
-        >
-          History
-        </a>
-      </nav>
+
+      {error && <p class={`${ADMIN_TYPE_ERROR} mb-4`}>{error}</p>}
+
       {tab === "edit"
         ? (
           <>
             <PostForm post={post} />
-            <div class="flex gap-2 mt-6 pt-6 border-t">
+            <div
+              class={`${ADMIN_CARD} flex flex-wrap items-center gap-2 mt-6`}
+            >
               {post.status === "published" && (
                 <form method="post">
                   <input type="hidden" name="action" value="unpublish" />
-                  <button
-                    type="submit"
-                    class="border border-gray-300 rounded px-4 py-2"
-                  >
+                  <button type="submit" class={ADMIN_BTN_SECONDARY}>
                     Unpublish
                   </button>
                 </form>
               )}
-              <ConfirmDelete itemName={post.title} />
+              <ConfirmDeleteTrigger itemName={post.title} />
             </div>
           </>
         )

@@ -21,7 +21,7 @@ export default define.page(async function App({ Component, url }) {
         <link rel="alternate" type="application/rss+xml" href="/rss.xml" />
         <title>{settings.siteName}</title>
       </head>
-      <body class="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 antialiased">
+      <body class="min-h-dvh font-sans bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 antialiased">
         <Component />
       </body>
     </html>

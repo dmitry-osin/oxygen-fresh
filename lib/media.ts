@@ -17,14 +17,53 @@ const MIME_TO_EXT: Record<string, string> = {
 
 const SAFE_NAME = /^[a-z0-9][a-z0-9.-]*$/;
 
+const EXT_TO_MIME: Record<string, string> = {
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".webp": "image/webp",
+  ".gif": "image/gif",
+  ".svg": "image/svg+xml",
+};
+
 export interface MediaFile {
   name: string;
   url: string;
+  /** Authenticated preview URL for the admin UI (Vite static can miss uploads). */
+  adminUrl: string;
 }
 
 export type SaveMediaResult =
   | { ok: true; file: MediaFile }
   | { ok: false; error: string };
+
+function toMediaFile(name: string): MediaFile {
+  return {
+    name,
+    url: `/uploads/${name}`,
+    adminUrl: `/admin/api/media/file?name=${encodeURIComponent(name)}`,
+  };
+}
+
+/** MIME type from a stored filename extension. */
+export function mimeForFileName(name: string): string {
+  const dot = name.lastIndexOf(".");
+  const ext = dot === -1 ? "" : name.slice(dot).toLowerCase();
+  return EXT_TO_MIME[ext] ?? "application/octet-stream";
+}
+
+/** Read a stored upload; rejects path traversal. */
+export async function readMediaFile(
+  name: string,
+): Promise<{ bytes: Uint8Array; mime: string } | null> {
+  if (!SAFE_NAME.test(name) || name.includes("..")) return null;
+  try {
+    const bytes = await Deno.readFile(`${uploadDir}/${name}`);
+    return { bytes, mime: mimeForFileName(name) };
+  } catch {
+    return null;
+  }
+}
 
 /** All uploaded files, newest first (filenames start with a timestamp). */
 export async function listMediaFiles(): Promise<MediaFile[]> {
@@ -32,7 +71,7 @@ export async function listMediaFiles(): Promise<MediaFile[]> {
   try {
     for await (const entry of Deno.readDir(uploadDir)) {
       if (entry.isFile && !entry.name.startsWith(".")) {
-        files.push({ name: entry.name, url: `/uploads/${entry.name}` });
+        files.push(toMediaFile(entry.name));
       }
     }
   } catch {
@@ -85,7 +124,7 @@ export async function saveMediaFile(file: File): Promise<SaveMediaResult> {
   } catch {
     return { ok: false, error: "Could not store the file." };
   }
-  return { ok: true, file: { ...stored, url: `/uploads/${stored.name}` } };
+  return { ok: true, file: toMediaFile(stored.name) };
 }
 
 /** Delete an upload by name. Path traversal is rejected by SAFE_NAME. */

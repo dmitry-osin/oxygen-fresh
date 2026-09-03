@@ -1,5 +1,4 @@
 // Public tag archive: published posts carrying the tag.
-// Source: ai/requirements.md F3 (tag page /tag/:slug), UI 5.2.
 
 import { Head } from "fresh/runtime";
 import { HttpError } from "fresh";
@@ -7,11 +6,18 @@ import { define } from "@/utils.ts";
 import { getTag, listPostsByTag } from "@/lib/tags.ts";
 import { getNavLinks } from "@/lib/menu.ts";
 import { getSettings } from "@/lib/settings.ts";
+import { getAuthorsMap } from "@/lib/users.ts";
 import { canonicalUrl } from "@/lib/seo.ts";
-import { Header } from "@/components/Header.tsx";
-import { Footer } from "@/components/Footer.tsx";
+import { PublicLayout } from "@/components/PublicLayout.tsx";
 import { PostCard } from "@/components/PostCard.tsx";
 import { SeoMeta } from "@/components/SeoMeta.tsx";
+import {
+  PUBLIC_MAIN_PY,
+  PUBLIC_READING,
+  PUBLIC_SHELL,
+  PUBLIC_TYPE_MUTED,
+  PUBLIC_TYPE_PAGE_TITLE,
+} from "@/lib/public-ui.ts";
 
 export const handler = define.handlers(async (ctx) => {
   const tag = await getTag(ctx.params.slug);
@@ -21,11 +27,21 @@ export const handler = define.handlers(async (ctx) => {
     getSettings(),
     getNavLinks(),
   ]);
-  return { data: { tag, posts, settings, navLinks } };
+  const authors = await getAuthorsMap(posts.map((p) => p.authorId));
+  return {
+    data: {
+      tag,
+      posts,
+      settings,
+      navLinks,
+      authors,
+      isAdmin: !!ctx.state.user,
+    },
+  };
 });
 
 export default define.page<typeof handler>(function TagArchive({ data }) {
-  const { tag, posts, settings, navLinks } = data;
+  const { tag, posts, settings, navLinks, authors, isAdmin } = data;
   return (
     <>
       <Head>
@@ -39,20 +55,42 @@ export default define.page<typeof handler>(function TagArchive({ data }) {
           }}
         />
       </Head>
-      <Header navLinks={navLinks} siteName={settings.siteName} />
-      <main class="max-w-3xl mx-auto px-4 py-8">
-        <h1 class="text-3xl font-bold mb-2">{tag.name}</h1>
-        {tag.description && (
-          <p class="text-gray-600 dark:text-gray-400 mb-6">{tag.description}</p>
-        )}
-        {posts.map((post) => <PostCard key={post.id} post={post} />)}
-        {posts.length === 0 && (
-          <p class="text-gray-600 dark:text-gray-400">
-            No published posts with this tag yet.
-          </p>
-        )}
-      </main>
-      <Footer siteName={settings.siteName} socialLinks={settings.socialLinks} />
+      <PublicLayout
+        siteName={settings.siteName}
+        logoUrl={settings.logoUrl}
+        navLinks={navLinks}
+        socialLinks={settings.socialLinks}
+        footerDescription={settings.footerDescription}
+        isAdmin={isAdmin}
+      >
+        <main class={`flex-1 ${PUBLIC_SHELL} ${PUBLIC_MAIN_PY}`}>
+          <div class={PUBLIC_READING}>
+            <header class="mb-10">
+              <h1 class={PUBLIC_TYPE_PAGE_TITLE}>{tag.name}</h1>
+              {tag.description && (
+                <p class={`${PUBLIC_TYPE_MUTED} mt-3`}>{tag.description}</p>
+              )}
+            </header>
+            {posts.length === 0
+              ? (
+                <p class={PUBLIC_TYPE_MUTED}>
+                  No published posts with this tag yet.
+                </p>
+              )
+              : (
+                <div class="space-y-4">
+                  {posts.map((post) => (
+                    <PostCard
+                      key={post.id}
+                      post={post}
+                      author={authors[post.authorId]}
+                    />
+                  ))}
+                </div>
+              )}
+          </div>
+        </main>
+      </PublicLayout>
     </>
   );
 });

@@ -1,15 +1,15 @@
-// Public dark theme toggle (F17): the only interactive element on
-// public pages. The class itself is applied pre-paint by
-// static/theme.js; this island only wires the button and persists the
-// choice in localStorage.
+// Public dark theme toggle (F17): icon button in the footer.
 
 import { useEffect } from "preact/hooks";
 import { useSignal } from "@preact/signals";
+import { Moon, Sun } from "lucide-preact";
+
+const BTN =
+  "inline-flex items-center justify-center rounded-md p-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors";
 
 export default function PublicThemeToggle() {
   const dark = useSignal(false);
 
-  // Sync with the class already set by static/theme.js.
   useEffect(() => {
     dark.value = document.documentElement.classList.contains("dark");
   }, []);
@@ -20,7 +20,7 @@ export default function PublicThemeToggle() {
     try {
       localStorage.setItem("theme", dark.value ? "dark" : "light");
     } catch (_) {
-      /* persistence unavailable - the class still applies for this page */
+      /* persistence unavailable */
     }
   }
 
@@ -28,10 +28,12 @@ export default function PublicThemeToggle() {
     <button
       type="button"
       onClick={toggle}
-      class="hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200"
-      aria-label="Toggle dark mode"
+      class={BTN}
+      aria-label={dark.value ? "Switch to light mode" : "Switch to dark mode"}
     >
-      {dark.value ? "Light mode" : "Dark mode"}
+      {dark.value
+        ? <Sun size={18} aria-hidden="true" />
+        : <Moon size={18} aria-hidden="true" />}
     </button>
   );
 }

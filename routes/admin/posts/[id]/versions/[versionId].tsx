@@ -8,6 +8,12 @@ import { define } from "@/utils.ts";
 import { getVersion, restoreVersionToDraft } from "@/lib/versions.ts";
 import { renderMarkdown } from "@/lib/markdown.ts";
 import { formatDate } from "@/utils/date.ts";
+import {
+  ADMIN_BTN_PRIMARY,
+  ADMIN_TYPE_BACK,
+  ADMIN_TYPE_BADGE,
+  ADMIN_TYPE_PAGE_TITLE,
+} from "@/components/AdminPage.tsx";
 
 export const handler = define.handlers({
   async GET(ctx) {
@@ -30,7 +36,7 @@ export const handler = define.handlers({
 export default define.page<typeof handler>(function VersionView({ data }) {
   const { snapshot, html } = data;
   return (
-    <div class="px-4 py-8 mx-auto max-w-3xl">
+    <div class="w-full px-6 py-8 lg:px-10">
       <Head>
         <title>
           Version {formatDate(snapshot.versionId)} - {snapshot.title}
@@ -39,15 +45,17 @@ export default define.page<typeof handler>(function VersionView({ data }) {
       <p class="mb-2">
         <a
           href={`/admin/posts/${snapshot.id}?tab=history`}
-          class="text-sm text-gray-600"
+          class={ADMIN_TYPE_BACK}
         >
           &larr; Back to history
         </a>
       </p>
-      <span class="inline-block bg-gray-200 rounded px-2 py-1 text-xs mb-4">
+      <span
+        class={`${ADMIN_TYPE_BADGE} inline-block bg-gray-200 dark:bg-gray-800 mb-4`}
+      >
         Version from {formatDate(snapshot.versionId)}
       </span>
-      <h1 class="text-3xl font-bold mb-4">{snapshot.title}</h1>
+      <h1 class={`${ADMIN_TYPE_PAGE_TITLE} mb-4`}>{snapshot.title}</h1>
       <article
         class="prose"
         // deno-lint-ignore react-no-danger -- sanitized server-side by renderMarkdown()
@@ -56,7 +64,7 @@ export default define.page<typeof handler>(function VersionView({ data }) {
       <form method="post" class="mt-8">
         <button
           type="submit"
-          class="bg-gray-900 text-white rounded px-4 py-2 font-medium"
+          class={ADMIN_BTN_PRIMARY}
         >
           Restore to draft
         </button>

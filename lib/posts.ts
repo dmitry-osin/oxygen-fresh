@@ -45,6 +45,32 @@ export async function listDrafts(): Promise<Post[]> {
   return drafts.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 }
 
+/** Fields needed by the admin post table (no Markdown body). */
+export type PostSummary = Omit<Post, "content">;
+
+const SUMMARY_CACHE_TTL_MS = 5_000;
+let summaryCache: { at: number; posts: PostSummary[] } | null = null;
+
+/** Drop the admin list cache after create / publish / delete / edit. */
+export function invalidatePostSummaryCache(): void {
+  summaryCache = null;
+}
+
+function toSummary(post: Post): PostSummary {
+  const { content: _content, ...summary } = post;
+  return summary;
+}
+
+/** Published + drafts for admin lists — bodies stripped, briefly cached. */
+export async function listAllPostSummaries(): Promise<PostSummary[]> {
+  if (summaryCache && Date.now() - summaryCache.at < SUMMARY_CACHE_TTL_MS) {
+    return summaryCache.posts;
+  }
+  const posts = (await listAllPosts()).map(toSummary);
+  summaryCache = { posts, at: Date.now() };
+  return posts;
+}
+
 /** Published posts + drafts for the admin list. */
 export async function listAllPosts(): Promise<Post[]> {
   const [published, drafts] = await Promise.all([

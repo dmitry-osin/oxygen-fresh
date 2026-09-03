@@ -1,11 +1,18 @@
 // Menu builder (F6): drag-and-drop reordering with drag handles, plus a
-// form POST that persists the new order. Delete confirmation reuses the
-// ConfirmDelete component (bundled here as a plain Preact component).
+// form POST that persists the new order. Delete uses ConfirmDeleteTrigger
+// (modal is ConfirmDeleteHost in the admin layout).
 // Source: ai/requirements.md 5.1 (drag handles), F6, :478.
 
 import { useSignal } from "@preact/signals";
 import type { MenuItem } from "@/types/index.ts";
-import ConfirmDelete from "./ConfirmDelete.tsx";
+import { ConfirmDeleteTrigger } from "@/components/ConfirmDeleteTrigger.tsx";
+import {
+  ADMIN_BTN_PRIMARY,
+  ADMIN_TYPE_BODY,
+  ADMIN_TYPE_META,
+  ADMIN_TYPE_MUTED,
+  ADMIN_TYPE_WARN,
+} from "@/lib/admin-ui.ts";
 
 /** Public href for an item, mirroring lib/menu.ts toNavLink. */
 function hrefOf(item: MenuItem): string {
@@ -14,7 +21,7 @@ function hrefOf(item: MenuItem): string {
 }
 
 const TYPE_BADGE =
-  "text-xs rounded-full px-2 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400";
+  `${ADMIN_TYPE_META} rounded-full px-2 py-0.5 bg-gray-100 dark:bg-gray-800`;
 
 export default function MenuBuilder({ items }: { items: MenuItem[] }) {
   const ordered = useSignal(items);
@@ -59,22 +66,25 @@ export default function MenuBuilder({ items }: { items: MenuItem[] }) {
             >
               ⠿
             </span>
-            <span class="font-medium truncate">{item.label}</span>
+            <span class={`${ADMIN_TYPE_BODY} font-medium truncate`}>
+              {item.label}
+            </span>
             <span class={TYPE_BADGE}>{item.type}</span>
-            <span class="text-xs text-gray-500 truncate hidden sm:inline">
+            <span class={`${ADMIN_TYPE_META} truncate hidden sm:inline`}>
               {hrefOf(item)}
             </span>
             <div class="ml-auto shrink-0">
-              <ConfirmDelete
+              <ConfirmDeleteTrigger
                 itemName={item.label}
                 actionUrl={`/admin/menu?id=${item.id}`}
+                size="sm"
               />
             </div>
           </li>
         ))}
       </ul>
       {items.length === 0 &&
-        <p class="text-gray-500">The menu is empty. Add items below.</p>}
+        <p class={ADMIN_TYPE_MUTED}>The menu is empty. Add items below.</p>}
       <form method="post" class="mt-4">
         <input type="hidden" name="action" value="reorder" />
         <input
@@ -85,12 +95,12 @@ export default function MenuBuilder({ items }: { items: MenuItem[] }) {
         <button
           type="submit"
           disabled={!dirty()}
-          class="bg-gray-900 text-white rounded px-4 py-2 text-sm font-medium disabled:opacity-40 dark:bg-gray-100 dark:text-gray-900"
+          class={ADMIN_BTN_PRIMARY}
         >
           Save order
         </button>
         {dirty() &&
-          <span class="text-sm text-amber-600 ml-3">Unsaved order</span>}
+          <span class={`${ADMIN_TYPE_WARN} ml-3`}>Unsaved order</span>}
       </form>
     </div>
   );

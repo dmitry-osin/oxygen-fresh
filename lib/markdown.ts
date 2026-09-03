@@ -13,11 +13,28 @@ const marked = new Marked(
   markedHighlight({
     langPrefix: "hljs language-",
     highlight(code, lang) {
-      const language = hljs.getLanguage(lang) ? lang : "plaintext";
+      const normalized = normalizeLang(lang);
+      const language = hljs.getLanguage(normalized) ? normalized : "plaintext";
       return hljs.highlight(code, { language }).value;
     },
   }),
 );
+
+/** Common fence aliases → highlight.js language ids. */
+function normalizeLang(lang: string): string {
+  const id = lang.trim().toLowerCase();
+  const aliases: Record<string, string> = {
+    ts: "typescript",
+    js: "javascript",
+    sh: "bash",
+    zsh: "bash",
+    yml: "yaml",
+    md: "markdown",
+    text: "plaintext",
+    txt: "plaintext",
+  };
+  return aliases[id] ?? id;
+}
 
 const SANITIZE_OPTIONS: sanitizeHtml.IOptions = {
   allowedTags: [

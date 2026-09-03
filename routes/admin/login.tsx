@@ -13,6 +13,13 @@ import {
   verifyPassword,
 } from "@/lib/auth.ts";
 import { SlidingWindowRateLimiter } from "@/lib/rate-limit.ts";
+import {
+  ADMIN_BTN_PRIMARY,
+  ADMIN_INPUT,
+  ADMIN_TYPE_ERROR,
+  ADMIN_TYPE_LABEL,
+  ADMIN_TYPE_PAGE_TITLE,
+} from "@/lib/admin-ui.ts";
 
 // 5 attempts per 5 minutes per client key.
 const limiter = new SlidingWindowRateLimiter(5, 5 * 60 * 1000);
@@ -68,31 +75,31 @@ export default define.page<typeof handler>(function Login({ data }) {
         method="post"
         class="w-full max-w-sm bg-white p-8 rounded-lg shadow-sm border border-gray-200"
       >
-        <h1 class="text-2xl font-bold mb-6">Sign in</h1>
+        <h1 class={`${ADMIN_TYPE_PAGE_TITLE} mb-6`}>Sign in</h1>
         <label class="block mb-4">
-          <span class="block text-sm font-medium mb-1">Username</span>
+          <span class={ADMIN_TYPE_LABEL}>Username</span>
           <input
             name="username"
             type="text"
             required
             autocomplete="username"
-            class="w-full border border-gray-300 rounded px-3 py-2"
+            class={ADMIN_INPUT}
           />
         </label>
         <label class="block mb-6">
-          <span class="block text-sm font-medium mb-1">Password</span>
+          <span class={ADMIN_TYPE_LABEL}>Password</span>
           <input
             name="password"
             type="password"
             required
             autocomplete="current-password"
-            class="w-full border border-gray-300 rounded px-3 py-2"
+            class={ADMIN_INPUT}
           />
         </label>
-        {data.error && <p class="text-red-600 text-sm mb-4">{data.error}</p>}
+        {data.error && <p class={`${ADMIN_TYPE_ERROR} mb-4`}>{data.error}</p>}
         <button
           type="submit"
-          class="w-full bg-gray-900 text-white rounded px-3 py-2 font-medium"
+          class={`w-full ${ADMIN_BTN_PRIMARY}`}
         >
           Sign in
         </button>

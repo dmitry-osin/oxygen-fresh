@@ -31,7 +31,10 @@ export function canonicalUrl(path: string, override?: string): string {
 }
 
 /** JSON-LD structured data for a blog post (schema.org BlogPosting). */
-export function postJsonLd(post: Post): Record<string, unknown> {
+export function postJsonLd(
+  post: Post,
+  authorName = post.authorId,
+): Record<string, unknown> {
   const url = absoluteUrl(`/${post.slug}`);
   return {
     "@context": "https://schema.org",
@@ -40,7 +43,7 @@ export function postJsonLd(post: Post): Record<string, unknown> {
     description: post.metaDescription ?? post.excerpt,
     datePublished: post.publishedAt,
     dateModified: post.updatedAt,
-    author: { "@type": "Person", name: post.authorId },
+    author: { "@type": "Person", name: authorName },
     mainEntityOfPage: { "@type": "WebPage", "@id": url },
     url,
   };

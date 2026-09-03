@@ -2,6 +2,7 @@
 // Kept separate to stay under the per-file line limit (ai/rules.md).
 
 import type { MediaFile } from "@/lib/media.ts";
+import { ADMIN_BTN_ROW, ADMIN_TYPE_MODAL_TITLE } from "@/lib/admin-ui.ts";
 
 interface MediaPickerProps {
   files: MediaFile[];
@@ -14,10 +15,10 @@ export default function MediaPicker(props: MediaPickerProps) {
     <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <div class="bg-white dark:bg-gray-900 rounded-lg p-6 w-full max-w-2xl shadow-lg">
         <div class="flex items-center justify-between mb-4">
-          <h2 class="text-lg font-bold">Media library</h2>
+          <h2 class={ADMIN_TYPE_MODAL_TITLE}>Media library</h2>
           <button
             type="button"
-            class="px-2 py-1 text-sm border border-gray-300 dark:border-gray-700 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+            class={ADMIN_BTN_ROW}
             onClick={props.onClose}
           >
             Close
@@ -36,9 +37,9 @@ export default function MediaPicker(props: MediaPickerProps) {
                   onClick={() => props.onPick(file)}
                 >
                   <img
-                    src={file.url}
+                    src={file.adminUrl ?? file.url}
                     alt={file.name}
-                    class="w-full h-20 object-cover rounded"
+                    class="w-full h-20 object-contain rounded bg-gray-50 dark:bg-gray-800"
                   />
                 </button>
               ))}

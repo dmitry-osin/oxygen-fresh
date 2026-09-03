@@ -6,10 +6,21 @@ import { Head } from "fresh/runtime";
 import { HttpError } from "fresh";
 import { define } from "@/utils.ts";
 import { deleteTag, getTag, listPostsByTag, updateTag } from "@/lib/tags.ts";
-import ConfirmDelete from "@/islands/ConfirmDelete.tsx";
+import { ConfirmDeleteTrigger } from "@/components/ConfirmDeleteTrigger.tsx";
+import {
+  ADMIN_BTN_PRIMARY,
+  ADMIN_INPUT,
+  ADMIN_TYPE_BACK,
+  ADMIN_TYPE_BODY,
+  ADMIN_TYPE_ERROR,
+  ADMIN_TYPE_LABEL,
+  ADMIN_TYPE_MUTED,
+  ADMIN_TYPE_PAGE_TITLE,
+  ADMIN_TYPE_SECTION,
+} from "@/components/AdminPage.tsx";
 
-const inputCls = "w-full border border-gray-300 rounded px-3 py-2";
-const labelCls = "block text-sm font-medium mb-1";
+const inputCls = ADMIN_INPUT;
+const labelCls = ADMIN_TYPE_LABEL;
 
 export const handler = define.handlers({
   async GET(ctx) {
@@ -44,16 +55,16 @@ export const handler = define.handlers({
 export default define.page<typeof handler>(function TagEditor({ data }) {
   const { tag, posts, error } = data;
   return (
-    <div class="px-4 py-8 mx-auto max-w-3xl">
+    <div class="w-full px-6 py-8 lg:px-10">
       <Head>
         <title>Tag: {tag.name} - Admin</title>
       </Head>
       <p class="mb-4">
-        <a href="/admin/tags" class="text-sm text-gray-600">&larr; All tags</a>
+        <a href="/admin/tags" class={ADMIN_TYPE_BACK}>&larr; All tags</a>
       </p>
-      <h1 class="text-2xl font-bold mb-1">{tag.name}</h1>
-      <p class="text-sm text-gray-600 mb-6">slug: {tag.slug}</p>
-      {error && <p class="text-red-600 mb-4">{error}</p>}
+      <h1 class={`${ADMIN_TYPE_PAGE_TITLE} mb-1`}>{tag.name}</h1>
+      <p class={`${ADMIN_TYPE_MUTED} mb-6`}>slug: {tag.slug}</p>
+      {error && <p class={`${ADMIN_TYPE_ERROR} mb-4`}>{error}</p>}
       <form method="post" class="space-y-4">
         <div>
           <label class={labelCls} for="name">Name</label>
@@ -81,17 +92,19 @@ export default define.page<typeof handler>(function TagEditor({ data }) {
           type="submit"
           name="action"
           value="save"
-          class="bg-gray-900 text-white rounded px-4 py-2 font-medium"
+          class={ADMIN_BTN_PRIMARY}
         >
           Save
         </button>
       </form>
 
-      <h2 class="text-lg font-bold mt-8 mb-2">Published posts with this tag</h2>
+      <h2 class={`${ADMIN_TYPE_SECTION} mt-8 mb-2`}>
+        Published posts with this tag
+      </h2>
       {posts.length === 0
-        ? <p class="text-gray-600">No published posts with this tag.</p>
+        ? <p class={ADMIN_TYPE_MUTED}>No published posts with this tag.</p>
         : (
-          <ul class="list-disc pl-5">
+          <ul class={`${ADMIN_TYPE_BODY} list-disc pl-5`}>
             {posts.map((post) => (
               <li key={post.id}>
                 <a href={`/admin/posts/${post.id}`} class="underline">
@@ -103,8 +116,8 @@ export default define.page<typeof handler>(function TagEditor({ data }) {
         )}
 
       <div class="mt-6 pt-6 border-t">
-        <ConfirmDelete itemName={tag.name} />
-        <p class="text-sm text-gray-600 mt-2">
+        <ConfirmDeleteTrigger itemName={tag.name} />
+        <p class={`${ADMIN_TYPE_MUTED} mt-2`}>
           Deleting a tag removes it from all posts.
         </p>
       </div>

@@ -15,6 +15,15 @@ import { getPageBySlug, listPages } from "@/lib/pages.ts";
 import { getPublishedBySlug, listPublishedPosts } from "@/lib/posts.ts";
 import MenuBuilder from "@/islands/MenuBuilder.tsx";
 import type { MenuItem, Page, Post } from "@/types/index.ts";
+import {
+  ADMIN_BTN_PRIMARY,
+  ADMIN_CARD,
+  ADMIN_INPUT,
+  ADMIN_TYPE_CARD_TITLE,
+  ADMIN_TYPE_ERROR,
+  ADMIN_TYPE_MUTED,
+  AdminPage,
+} from "@/components/AdminPage.tsx";
 
 interface MenuData {
   items: MenuItem[];
@@ -23,8 +32,7 @@ interface MenuData {
   error: string | null;
 }
 
-const INPUT =
-  "border border-gray-300 dark:border-gray-700 dark:bg-gray-900 rounded px-3 py-2";
+const INPUT = ADMIN_INPUT;
 
 async function menuData(error: string | null): Promise<MenuData> {
   const [items, pages, posts] = await Promise.all([
@@ -122,74 +130,79 @@ async function reorder(form: FormData): Promise<string | null> {
 export default define.page<typeof handler>(function MenuPage({ data }) {
   const { items, pages, posts, error } = data;
   return (
-    <div class="px-4 py-8 mx-auto max-w-3xl">
+    <AdminPage
+      title="Menu"
+      description="Drag items to reorder. Changes to order need Save order."
+    >
       <Head>
         <title>Menu - Admin</title>
       </Head>
-      <h1 class="text-2xl font-bold mb-6">Menu</h1>
-      {error && <p class="text-red-600 mb-4">{error}</p>}
-      <MenuBuilder items={items} />
+      {error && <p class={`${ADMIN_TYPE_ERROR} mb-4`}>{error}</p>}
+      <div class={`${ADMIN_CARD} mb-8`}>
+        <MenuBuilder items={items} />
+      </div>
 
-      <h2 class="text-lg font-bold mt-10 mb-3">Add menu item</h2>
-      <form method="post" class="flex flex-wrap gap-2 mb-4">
-        <input type="hidden" name="action" value="add-internal" />
-        <select name="target" required class={`${INPUT} flex-1 min-w-48`}>
-          <optgroup label="Pages">
-            {pages.map((page) => (
-              <option key={page.id} value={`page:${page.slug}`}>
-                {page.title}
-              </option>
-            ))}
-          </optgroup>
-          <optgroup label="Posts">
-            {posts.map((post) => (
-              <option key={post.id} value={`post:${post.slug}`}>
-                {post.title}
-              </option>
-            ))}
-          </optgroup>
-        </select>
-        <input
-          name="label"
-          type="text"
-          placeholder="Label (defaults to title)"
-          class={`${INPUT} flex-1 min-w-48`}
-        />
-        <button
-          type="submit"
-          class="bg-gray-900 text-white rounded px-4 py-2 text-sm font-medium dark:bg-gray-100 dark:text-gray-900"
-        >
-          Add
-        </button>
-      </form>
-      <form method="post" class="flex flex-wrap gap-2">
-        <input type="hidden" name="action" value="add-external" />
-        <input
-          name="url"
-          type="text"
-          required
-          placeholder="https://example.com"
-          class={`${INPUT} flex-1 min-w-48`}
-        />
-        <input
-          name="label"
-          type="text"
-          required
-          placeholder="Label"
-          class={`${INPUT} flex-1 min-w-32`}
-        />
-        <button
-          type="submit"
-          class="bg-gray-900 text-white rounded px-4 py-2 text-sm font-medium dark:bg-gray-100 dark:text-gray-900"
-        >
-          Add link
-        </button>
-      </form>
+      <div class="grid gap-6 lg:grid-cols-2">
+        <section class={ADMIN_CARD}>
+          <h2 class={`${ADMIN_TYPE_CARD_TITLE} mb-3`}>Add page or post</h2>
+          <form method="post" class="flex flex-col gap-3">
+            <input type="hidden" name="action" value="add-internal" />
+            <select name="target" required class={INPUT}>
+              <optgroup label="Pages">
+                {pages.map((page) => (
+                  <option key={page.id} value={`page:${page.slug}`}>
+                    {page.title}
+                  </option>
+                ))}
+              </optgroup>
+              <optgroup label="Posts">
+                {posts.map((post) => (
+                  <option key={post.id} value={`post:${post.slug}`}>
+                    {post.title}
+                  </option>
+                ))}
+              </optgroup>
+            </select>
+            <input
+              name="label"
+              type="text"
+              placeholder="Label (defaults to title)"
+              class={INPUT}
+            />
+            <button type="submit" class={`${ADMIN_BTN_PRIMARY} self-start`}>
+              Add
+            </button>
+          </form>
+        </section>
+        <section class={ADMIN_CARD}>
+          <h2 class={`${ADMIN_TYPE_CARD_TITLE} mb-3`}>Add external link</h2>
+          <form method="post" class="flex flex-col gap-3">
+            <input type="hidden" name="action" value="add-external" />
+            <input
+              name="url"
+              type="text"
+              required
+              placeholder="https://example.com"
+              class={INPUT}
+            />
+            <input
+              name="label"
+              type="text"
+              required
+              placeholder="Label"
+              class={INPUT}
+            />
+            <button type="submit" class={`${ADMIN_BTN_PRIMARY} self-start`}>
+              Add link
+            </button>
+          </form>
+        </section>
+      </div>
       {pages.length === 0 && posts.length === 0 && (
-        <p class="text-sm text-gray-500 mt-3">
+        <p class={`${ADMIN_TYPE_MUTED} mt-4`}>
           No pages or posts yet - create content first, or add an external link.
         </p>
       )}
-    </div>
+    </AdminPage>
   );
 });
