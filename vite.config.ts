@@ -28,6 +28,11 @@ export default defineConfig({
         "**/*.sqlite3",
         "**/*.sqlite3-wal",
         "**/*.sqlite3-shm",
+        // Windows reserved names (often created by `curl -o NUL` / `2>nul`)
+        path.join(root, "NUL"),
+        path.join(root, "nul"),
+        "**/NUL",
+        "**/nul",
       ],
     },
   },

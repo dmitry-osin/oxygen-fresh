@@ -11,13 +11,13 @@ import {
   getMenuItems,
   reorderMenuItems,
 } from "@/lib/menu.ts";
-import { getPageBySlug, listPageSummaries, type PageSummary } from "@/lib/pages.ts";
+import { getPageBySlug, listPagePickers, type PagePickerItem } from "@/lib/pages.ts";
 import {
   getPublishedBySlug,
-  listPublishedPostSummaries,
-  type PostSummary,
+  listPublishedPostPickers,
+  type PostPickerItem,
 } from "@/lib/posts.ts";
-import MenuBuilder from "@/islands/MenuBuilder.tsx";
+import { MenuBuilder } from "@/components/MenuBuilder.tsx";
 import type { MenuItem } from "@/types/index.ts";
 import {
   ADMIN_BTN_PRIMARY,
@@ -31,8 +31,8 @@ import {
 
 interface MenuData {
   items: MenuItem[];
-  pages: PageSummary[];
-  posts: PostSummary[];
+  pages: PagePickerItem[];
+  posts: PostPickerItem[];
   error: string | null;
 }
 
@@ -41,8 +41,8 @@ const INPUT = ADMIN_INPUT;
 async function menuData(error: string | null): Promise<MenuData> {
   const [items, pages, posts] = await Promise.all([
     getMenuItems(),
-    listPageSummaries(),
-    listPublishedPostSummaries(),
+    listPagePickers(),
+    listPublishedPostPickers(),
   ]);
   return { items, pages, posts, error };
 }
@@ -140,6 +140,7 @@ export default define.page<typeof handler>(function MenuPage({ data }) {
     >
       <Head>
         <title>Menu - Admin</title>
+        <script type="module" src="/admin-menu.js"></script>
       </Head>
       {error && <p class={`${ADMIN_TYPE_ERROR} mb-4`}>{error}</p>}
       <div class={`${ADMIN_CARD} mb-8`}>

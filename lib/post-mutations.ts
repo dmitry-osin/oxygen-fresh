@@ -46,9 +46,8 @@ async function commitPost(post: Post, previous?: Post): Promise<void> {
   ) {
     op.delete(KvKeys.publishedPost(previous.slug));
   }
-  if (
-    previous && previous.status !== "published" && post.status === "published"
-  ) {
+  if (post.status === "published") {
+    // Always clear draft slot so a leftover draft cannot shadow published.
     op.delete(KvKeys.draftPost(post.id));
   }
   op.set(postKey(post), post);

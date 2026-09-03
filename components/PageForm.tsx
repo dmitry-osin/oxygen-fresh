@@ -6,6 +6,7 @@ import type { ComponentChildren } from "preact";
 import type { Page } from "@/types/index.ts";
 import SlugField from "@/islands/SlugField.tsx";
 import MarkdownEditor from "@/islands/MarkdownEditor.tsx";
+import UnsavedChangesGuard from "@/islands/UnsavedChangesGuard.tsx";
 import {
   ADMIN_BTN_PRIMARY,
   ADMIN_CARD,
@@ -41,6 +42,7 @@ function FieldSection(props: {
 export function PageForm({ page }: { page: Page }) {
   return (
     <form method="post" class="space-y-6">
+      <UnsavedChangesGuard />
       <FieldSection
         title="Content"
         description="Title, URL slug and Markdown body."

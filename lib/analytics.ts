@@ -60,19 +60,16 @@ export interface DailyPoint extends DailyViews {
 
 /** Daily aggregates for the last `days` days, zero-filled for missing days. */
 export async function dailyViews(days: number): Promise<DailyPoint[]> {
-  const byDate = new Map<string, DailyViews>();
-  const iter = kv.list<DailyViews>({ prefix: ["analytics", "daily"] });
-  for await (const entry of iter) {
-    byDate.set(String(entry.key[2]), entry.value);
-  }
-  const points: DailyPoint[] = [];
   const now = Date.now();
+  const dates: string[] = [];
   for (let i = days - 1; i >= 0; i--) {
-    const date = new Date(now - i * 86_400_000).toISOString().slice(0, 10);
-    points.push({
-      date,
-      ...byDate.get(date) ?? { postViews: 0, pageViews: 0 },
-    });
+    dates.push(new Date(now - i * 86_400_000).toISOString().slice(0, 10));
   }
-  return points;
+  const entries = await Promise.all(
+    dates.map((date) => kv.get<DailyViews>(KvKeys.analyticsDaily(date))),
+  );
+  return dates.map((date, index) => ({
+    date,
+    ...(entries[index].value ?? { postViews: 0, pageViews: 0 }),
+  }));
 }

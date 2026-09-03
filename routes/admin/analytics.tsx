@@ -1,15 +1,17 @@
 // Analytics dashboard (F13): totals, top-10 posts/pages by views and a
 // server-rendered SVG chart of the last 7 days.
 // Source: ai/requirements.md 350-356, :471.
+//
+// Uses content-stripped summaries so opening Insights does not pull every
+// Markdown body from KV just to show titles and counts.
 
 import { Head } from "fresh/runtime";
 import { define } from "@/utils.ts";
 import { dailyViews, listViews, type ViewCount } from "@/lib/analytics.ts";
-import { listAllPosts } from "@/lib/posts.ts";
-import { listPages } from "@/lib/pages.ts";
+import { listAllPostSummaries, type PostSummary } from "@/lib/posts.ts";
+import { listPageSummaries, type PageSummary } from "@/lib/pages.ts";
 import { listTags } from "@/lib/tags.ts";
 import { DailyViewsChart } from "@/components/DailyViewsChart.tsx";
-import type { Page, Post } from "@/types/index.ts";
 import {
   ADMIN_CARD,
   ADMIN_TYPE_CARD_TITLE,
@@ -28,23 +30,26 @@ export interface TopEntry {
 /** Join view counters with entity titles; deleted entities are skipped. */
 function topTitles(
   views: ViewCount[],
-  entities: (Post | Page)[],
+  entities: Pick<PostSummary | PageSummary, "id" | "title">[],
   limit: number,
 ): TopEntry[] {
-  return views
-    .flatMap((count) => {
-      const entity = entities.find((e) => e.id === count.id);
-      return entity ? [{ title: entity.title, views: count.views }] : [];
-    })
-    .slice(0, limit);
+  const titles = new Map(entities.map((entity) => [entity.id, entity.title]));
+  const entries: TopEntry[] = [];
+  for (const count of views) {
+    const title = titles.get(count.id);
+    if (!title) continue;
+    entries.push({ title, views: count.views });
+    if (entries.length >= limit) break;
+  }
+  return entries;
 }
 
 export const handler = define.handlers({
   async GET() {
     const [posts, pages, tags, postViews, pageViews, daily] = await Promise
       .all([
-        listAllPosts(),
-        listPages(),
+        listAllPostSummaries(),
+        listPageSummaries(),
         listTags(),
         listViews("post"),
         listViews("page"),

@@ -25,6 +25,14 @@ export type PageResult =
 
 const PAGES_PREFIX = ["pages"];
 
+const SUMMARY_CACHE_TTL_MS = 5_000;
+let pageSummaryCache: { at: number; pages: PageSummary[] } | null = null;
+
+/** Drop the page list cache after create / update / delete. */
+export function invalidatePageSummaryCache(): void {
+  pageSummaryCache = null;
+}
+
 /** All pages, ordered by slug. */
 export async function listPages(): Promise<Page[]> {
   const pages: Page[] = [];
@@ -43,7 +51,29 @@ function toPageSummary(page: Page): PageSummary {
 
 /** All pages without Markdown bodies. */
 export async function listPageSummaries(): Promise<PageSummary[]> {
-  return (await listPages()).map(toPageSummary);
+  if (
+    pageSummaryCache &&
+    Date.now() - pageSummaryCache.at < SUMMARY_CACHE_TTL_MS
+  ) {
+    return pageSummaryCache.pages;
+  }
+  const pages: PageSummary[] = [];
+  const iter = kv.list<Page>({ prefix: PAGES_PREFIX });
+  for await (const entry of iter) pages.push(toPageSummary(entry.value));
+  pages.sort((a, b) => a.slug.localeCompare(b.slug));
+  pageSummaryCache = { pages, at: Date.now() };
+  return pages;
+}
+
+/** id/slug/title only — for admin selects. */
+export type PagePickerItem = Pick<Page, "id" | "slug" | "title">;
+
+export async function listPagePickers(): Promise<PagePickerItem[]> {
+  return (await listPageSummaries()).map(({ id, slug, title }) => ({
+    id,
+    slug,
+    title,
+  }));
 }
 
 export async function getPageBySlug(slug: string): Promise<Page | null> {
@@ -94,6 +124,7 @@ export async function createPage(input: PageInput): Promise<PageResult> {
   };
   await kv.set(KvKeys.page(page.slug), page);
   await addToList(KvKeys.pageIds(), page.id);
+  invalidatePageSummaryCache();
   return { ok: true, page };
 }
 
@@ -125,6 +156,7 @@ export async function updatePage(
   const op = kv.atomic().set(KvKeys.page(slug), updated);
   if (slug !== page.slug) op.delete(KvKeys.page(page.slug));
   await op.commit();
+  invalidatePageSummaryCache();
   return { ok: true, page: updated };
 }
 
@@ -133,5 +165,6 @@ export async function deletePage(id: string): Promise<boolean> {
   if (!page) return false;
   await kv.delete(KvKeys.page(page.slug));
   await removeFromList(KvKeys.pageIds(), id);
+  invalidatePageSummaryCache();
   return true;
 }

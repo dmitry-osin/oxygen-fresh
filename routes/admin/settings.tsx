@@ -10,6 +10,7 @@ import { SocialLinksFields } from "@/components/SocialLinksFields.tsx";
 import FilePickField from "@/islands/FilePickField.tsx";
 import SettingsTabs from "@/islands/SettingsTabs.tsx";
 import SidebarBlocksEditor from "@/islands/SidebarBlocksEditor.tsx";
+import UnsavedChangesGuard from "@/islands/UnsavedChangesGuard.tsx";
 import type { Settings } from "@/types/index.ts";
 import { mediaAdminPreviewUrl } from "@/lib/media-urls.ts";
 import {
@@ -318,7 +319,13 @@ export default define.page<typeof handler>(function SettingsPage({ data }) {
         enctype="multipart/form-data"
         class="space-y-5"
       >
-        <input type="hidden" name="settingsTab" value={tab} />
+        <UnsavedChangesGuard />
+        <input
+          type="hidden"
+          name="settingsTab"
+          value={tab}
+          data-unsaved-ignore
+        />
         <SettingsTabs
           tabs={[...SETTINGS_TABS]}
           initialTab={tab}

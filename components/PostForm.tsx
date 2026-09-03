@@ -7,8 +7,10 @@ import type { Post } from "@/types/index.ts";
 import SlugField from "@/islands/SlugField.tsx";
 import MarkdownEditor from "@/islands/MarkdownEditor.tsx";
 import TagInput from "@/islands/TagInput.tsx";
+import UnsavedChangesGuard from "@/islands/UnsavedChangesGuard.tsx";
 import {
   ADMIN_BTN_PRIMARY,
+  ADMIN_BTN_SECONDARY,
   ADMIN_BTN_SUCCESS,
   ADMIN_CARD,
   ADMIN_INPUT,
@@ -52,6 +54,7 @@ function FieldSection(props: {
 export function PostForm({ post }: { post: Post }) {
   return (
     <form method="post" class="space-y-6">
+      <UnsavedChangesGuard />
       <FieldSection
         title="Content"
         description="Title, URL slug and Markdown body."
@@ -105,24 +108,33 @@ export function PostForm({ post }: { post: Post }) {
         <div class="grid gap-4 sm:grid-cols-2">
           <div>
             <label class={labelCls} for="status">Status</label>
-            <select
-              id="status"
-              name="status"
-              class={inputCls}
-              disabled={post.status === "published"}
-            >
-              <option value="draft" selected={post.status === "draft"}>
-                draft
-              </option>
-              <option value="scheduled" selected={post.status === "scheduled"}>
-                scheduled
-              </option>
-            </select>
-            {post.status === "published" && (
-              <p class={`${ADMIN_TYPE_MUTED} mt-1`}>
-                Published — use Unpublish below to return to draft.
-              </p>
-            )}
+            {post.status === "published"
+              ? (
+                <>
+                  <input type="hidden" name="status" value="published" />
+                  <p
+                    class={`${inputCls} bg-gray-50 dark:bg-gray-950 text-gray-700 dark:text-gray-300`}
+                  >
+                    published
+                  </p>
+                  <p class={`${ADMIN_TYPE_MUTED} mt-1`}>
+                    Use Unpublish below to return to draft.
+                  </p>
+                </>
+              )
+              : (
+                <select id="status" name="status" class={inputCls}>
+                  <option value="draft" selected={post.status === "draft"}>
+                    draft
+                  </option>
+                  <option
+                    value="scheduled"
+                    selected={post.status === "scheduled"}
+                  >
+                    scheduled
+                  </option>
+                </select>
+              )}
           </div>
           <div>
             <label class={labelCls} for="template">Template</label>
@@ -203,7 +215,7 @@ export function PostForm({ post }: { post: Post }) {
           value="save"
           class={ADMIN_BTN_PRIMARY}
         >
-          Save draft
+          {post.status === "published" ? "Save" : "Save draft"}
         </button>
         <button
           type="submit"
@@ -213,6 +225,16 @@ export function PostForm({ post }: { post: Post }) {
         >
           {post.status === "published" ? "Publish new version" : "Publish"}
         </button>
+        {post.status === "published" && (
+          <a
+            href={`/${post.slug}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            class={ADMIN_BTN_SECONDARY}
+          >
+            View post
+          </a>
+        )}
       </div>
     </form>
   );

@@ -73,7 +73,31 @@ export async function listAllPostSummaries(): Promise<PostSummary[]> {
 
 /** Published posts without Markdown bodies (menus, pickers, indexes). */
 export async function listPublishedPostSummaries(): Promise<PostSummary[]> {
-  return (await listPublishedPosts()).map(toSummary);
+  // Reuse the admin summary cache when warm (e.g. after visiting Posts).
+  if (summaryCache && Date.now() - summaryCache.at < SUMMARY_CACHE_TTL_MS) {
+    return summaryCache.posts
+      .filter((post) => post.status === "published")
+      .sort((a, b) =>
+        (b.publishedAt ?? "").localeCompare(a.publishedAt ?? "")
+      );
+  }
+  const posts: PostSummary[] = [];
+  const iter = kv.list<Post>({ prefix: PUBLISHED_PREFIX });
+  for await (const entry of iter) posts.push(toSummary(entry.value));
+  return posts.sort((a, b) =>
+    (b.publishedAt ?? "").localeCompare(a.publishedAt ?? "")
+  );
+}
+
+/** id/slug/title only — for selects that must not pull Markdown bodies into HTML. */
+export type PostPickerItem = Pick<Post, "id" | "slug" | "title">;
+
+export async function listPublishedPostPickers(): Promise<PostPickerItem[]> {
+  return (await listPublishedPostSummaries()).map(({ id, slug, title }) => ({
+    id,
+    slug,
+    title,
+  }));
 }
 
 /** UTC calendar day (YYYY-MM-DD) from a post's publishedAt. */
@@ -117,13 +141,12 @@ export async function getPublishedBySlug(slug: string): Promise<Post | null> {
 }
 
 export async function getPostById(id: string): Promise<Post | null> {
-  const draft = await kv.get<Post>(KvKeys.draftPost(id));
-  if (draft.value) return draft.value;
+  // Prefer the published copy when both keys somehow exist (stale draft).
   const iter = kv.list<Post>({ prefix: PUBLISHED_PREFIX });
   for await (const entry of iter) {
     if (entry.value.id === id) return entry.value;
   }
-  return null;
+  return (await kv.get<Post>(KvKeys.draftPost(id))).value;
 }
 
 /** True when another post already uses the slug. */

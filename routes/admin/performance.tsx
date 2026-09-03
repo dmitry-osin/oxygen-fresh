@@ -1,15 +1,14 @@
 // Performance dashboard (F15): rolling response times and HTML sizes
-// from lib/perf.ts, cache hit rates and a live KV read latency probe.
+// from lib/perf.ts, cache hit rates and an async KV latency probe.
 // Source: ai/requirements.md 366-369, :472.
 //
-// Page load only times reads. Writes used to run on every GET and churn
-// the SQLite WAL — on Windows that can make Vite think sources changed
-// and stall navigations across the admin UI.
+// Snapshot metrics are in-memory and cheap. KV probes run after paint via
+// /admin/api/perf-kv so opening this page does not wait on SQLite rounds
+// (writes remain opt-in — they churn the WAL and can stall Vite on Windows).
 
 import { Head } from "fresh/runtime";
 import { define } from "@/utils.ts";
 import { perfSnapshot } from "@/lib/perf.ts";
-import { kv, KvKeys } from "@/lib/kv.ts";
 import {
   ADMIN_BTN_SECONDARY,
   ADMIN_CARD,
@@ -27,47 +26,12 @@ import {
   AdminPage,
 } from "@/components/AdminPage.tsx";
 
-const PROBE_ROUNDS = 5;
-const PROBE_KEY = ["perf_probe"] as const;
-
-interface Latency {
-  avgReadMs: number;
-  avgWriteMs: number | null;
-}
-
-/** Timed KV reads against the settings key (always present / harmless). */
-async function measureKvReads(): Promise<number> {
-  const key = KvKeys.settings();
-  const reads: number[] = [];
-  for (let i = 0; i < PROBE_ROUNDS; i++) {
-    const started = performance.now();
-    await kv.get(key);
-    reads.push(performance.now() - started);
-  }
-  return reads.reduce((sum, v) => sum + v, 0) / reads.length;
-}
-
-/** Optional write probe — only when explicitly requested. */
-async function measureKvWrites(): Promise<number> {
-  const writes: number[] = [];
-  for (let i = 0; i < PROBE_ROUNDS; i++) {
-    const started = performance.now();
-    await kv.set(PROBE_KEY, i);
-    writes.push(performance.now() - started);
-  }
-  await kv.delete(PROBE_KEY);
-  return writes.reduce((sum, v) => sum + v, 0) / writes.length;
-}
-
 export const handler = define.handlers({
-  async GET(ctx) {
-    const withWrite = ctx.url.searchParams.get("writeProbe") === "1";
-    const avgReadMs = await measureKvReads();
-    const avgWriteMs = withWrite ? await measureKvWrites() : null;
+  GET(ctx) {
     return {
       data: {
         snapshot: perfSnapshot(),
-        latency: { avgReadMs, avgWriteMs } satisfies Latency,
+        writeProbe: ctx.url.searchParams.get("writeProbe") === "1",
       },
     };
   },
@@ -93,7 +57,7 @@ function kb(bytes: number): string {
 export default define.page<typeof handler>(function PerformancePage(
   { data },
 ) {
-  const { snapshot, latency } = data;
+  const { snapshot, writeProbe } = data;
   return (
     <AdminPage
       title="Performance"
@@ -101,6 +65,7 @@ export default define.page<typeof handler>(function PerformancePage(
     >
       <Head>
         <title>Performance - Admin</title>
+        <script type="module" src="/admin-perf.js"></script>
       </Head>
 
       <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -130,18 +95,21 @@ export default define.page<typeof handler>(function PerformancePage(
 
       <h2 class={`${ADMIN_TYPE_SECTION} mb-3`}>KV latency</h2>
       <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-        <Metric label="Avg read" value={ms(latency.avgReadMs)} />
-        <Metric
-          label="Avg write"
-          value={latency.avgWriteMs === null
-            ? "not run"
-            : ms(latency.avgWriteMs)}
-        />
+        <div class={ADMIN_CARD}>
+          <p class={ADMIN_TYPE_STAT_LABEL}>Avg read</p>
+          <p class={`${ADMIN_TYPE_STAT} mt-1`} data-perf-read>…</p>
+        </div>
+        <div class={ADMIN_CARD}>
+          <p class={ADMIN_TYPE_STAT_LABEL}>Avg write</p>
+          <p class={`${ADMIN_TYPE_STAT} mt-1`} data-perf-write>
+            {writeProbe ? "…" : "not run"}
+          </p>
+        </div>
       </div>
       <div class="flex flex-wrap items-center gap-3 mb-8">
         <p class={ADMIN_TYPE_META}>
-          Reads run on every visit. Write probe is opt-in so local Vite is
-          not stalled by SQLite WAL churn.
+          Latency is measured after the page opens. Write probe is opt-in so
+          local Vite is not stalled by SQLite WAL churn.
         </p>
         <a href="/admin/performance?writeProbe=1" class={ADMIN_BTN_SECONDARY}>
           Run write probe

@@ -7,6 +7,8 @@
 
 import { kv, KvKeys } from "./kv.ts";
 import { saveMenuItems } from "./menu.ts";
+import { invalidatePageSummaryCache } from "./pages.ts";
+import { invalidatePostSummaryCache } from "./posts.ts";
 import { DEFAULT_SETTINGS, saveSettings } from "./settings.ts";
 import { normalizeSidebarBlocks } from "./sidebar.ts";
 import { indexPost } from "./search.ts";
@@ -215,6 +217,7 @@ async function applyPosts(posts: Post[]): Promise<void> {
   }
   await op.commit();
   await kv.set(KvKeys.postIds(), posts.map((post) => post.id));
+  invalidatePostSummaryCache();
   for (const post of posts) {
     if (post.status === "published") await indexPost(post);
   }
@@ -226,6 +229,7 @@ async function applyPages(pages: Page[]): Promise<void> {
   for (const page of pages) op.set(KvKeys.page(page.slug), page);
   await op.commit();
   await kv.set(KvKeys.pageIds(), pages.map((page) => page.id));
+  invalidatePageSummaryCache();
 }
 
 async function applyTags(tags: Tag[]): Promise<void> {

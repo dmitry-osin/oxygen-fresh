@@ -54,12 +54,18 @@ function parseTags(raw: string): string[] {
 
 function parsePostInput(form: FormData): PostInput {
   const get = (name: string) => String(form.get(name) ?? "").trim();
+  const statusRaw = get("status");
+  const status: PostInput["status"] = statusRaw === "scheduled"
+    ? "scheduled"
+    : statusRaw === "published"
+    ? "published"
+    : "draft";
   return {
     title: get("title"),
     slug: get("slug"),
     content: String(form.get("content") ?? ""),
     excerpt: get("excerpt"),
-    status: get("status") === "scheduled" ? "scheduled" : "draft",
+    status,
     tags: parseTags(get("tags")),
     template: get("template") === "full-width" ? "full-width" : "default",
     publishedAt: toIso(get("publishedAt")),
@@ -261,12 +267,22 @@ export default define.page<typeof handler>(function PostEditor({ data }) {
               class={`${ADMIN_CARD} flex flex-wrap items-center gap-2 mt-6`}
             >
               {post.status === "published" && (
-                <form method="post">
-                  <input type="hidden" name="action" value="unpublish" />
-                  <button type="submit" class={ADMIN_BTN_SECONDARY}>
-                    Unpublish
-                  </button>
-                </form>
+                <>
+                  <a
+                    href={`/${post.slug}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class={ADMIN_BTN_SECONDARY}
+                  >
+                    View post
+                  </a>
+                  <form method="post">
+                    <input type="hidden" name="action" value="unpublish" />
+                    <button type="submit" class={ADMIN_BTN_SECONDARY}>
+                      Unpublish
+                    </button>
+                  </form>
+                </>
               )}
               <ConfirmDeleteTrigger itemName={post.title} />
             </div>
