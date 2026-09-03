@@ -10,6 +10,7 @@ import { SocialLinksFields } from "@/components/SocialLinksFields.tsx";
 import FilePickField from "@/islands/FilePickField.tsx";
 import SettingsTabs from "@/islands/SettingsTabs.tsx";
 import type { Settings } from "@/types/index.ts";
+import { mediaAdminPreviewUrl } from "@/lib/media-urls.ts";
 import {
   ADMIN_BTN_PRIMARY,
   ADMIN_INPUT,
@@ -334,7 +335,7 @@ export default define.page<typeof handler>(function SettingsPage({ data }) {
                 buttonLabel="Choose logo"
                 hint="PNG, JPG, WebP, GIF or SVG"
                 imagePreview
-                currentImageUrl={settings.logoUrl}
+                currentImageUrl={mediaAdminPreviewUrl(settings.logoUrl)}
               />
             </div>
             <div>
@@ -345,7 +346,7 @@ export default define.page<typeof handler>(function SettingsPage({ data }) {
                 buttonLabel="Choose favicon"
                 hint="PNG, JPG, WebP, GIF or SVG"
                 imagePreview
-                currentImageUrl={settings.faviconUrl}
+                currentImageUrl={mediaAdminPreviewUrl(settings.faviconUrl)}
               />
             </div>
           </div>

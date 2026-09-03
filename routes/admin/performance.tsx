@@ -1,12 +1,17 @@
 // Performance dashboard (F15): rolling response times and HTML sizes
-// from lib/perf.ts, cache hit rates and a live KV read/write latency
-// probe. Source: ai/requirements.md 366-369, :472.
+// from lib/perf.ts, cache hit rates and a live KV read latency probe.
+// Source: ai/requirements.md 366-369, :472.
+//
+// Page load only times reads. Writes used to run on every GET and churn
+// the SQLite WAL — on Windows that can make Vite think sources changed
+// and stall navigations across the admin UI.
 
 import { Head } from "fresh/runtime";
 import { define } from "@/utils.ts";
 import { perfSnapshot } from "@/lib/perf.ts";
-import { kv } from "@/lib/kv.ts";
+import { kv, KvKeys } from "@/lib/kv.ts";
 import {
+  ADMIN_BTN_SECONDARY,
   ADMIN_CARD,
   ADMIN_EMPTY,
   ADMIN_TABLE,
@@ -27,33 +32,42 @@ const PROBE_KEY = ["perf_probe"] as const;
 
 interface Latency {
   avgReadMs: number;
-  avgWriteMs: number;
+  avgWriteMs: number | null;
 }
 
-/** A few timed KV reads/writes to sample live latency. */
-async function measureKvLatency(): Promise<Latency> {
+/** Timed KV reads against the settings key (always present / harmless). */
+async function measureKvReads(): Promise<number> {
+  const key = KvKeys.settings();
   const reads: number[] = [];
+  for (let i = 0; i < PROBE_ROUNDS; i++) {
+    const started = performance.now();
+    await kv.get(key);
+    reads.push(performance.now() - started);
+  }
+  return reads.reduce((sum, v) => sum + v, 0) / reads.length;
+}
+
+/** Optional write probe — only when explicitly requested. */
+async function measureKvWrites(): Promise<number> {
   const writes: number[] = [];
   for (let i = 0; i < PROBE_ROUNDS; i++) {
-    let started = performance.now();
-    await kv.get(PROBE_KEY);
-    reads.push(performance.now() - started);
-    started = performance.now();
+    const started = performance.now();
     await kv.set(PROBE_KEY, i);
     writes.push(performance.now() - started);
   }
   await kv.delete(PROBE_KEY);
-  const avg = (values: number[]) =>
-    values.reduce((sum, v) => sum + v, 0) / values.length;
-  return { avgReadMs: avg(reads), avgWriteMs: avg(writes) };
+  return writes.reduce((sum, v) => sum + v, 0) / writes.length;
 }
 
 export const handler = define.handlers({
-  async GET() {
+  async GET(ctx) {
+    const withWrite = ctx.url.searchParams.get("writeProbe") === "1";
+    const avgReadMs = await measureKvReads();
+    const avgWriteMs = withWrite ? await measureKvWrites() : null;
     return {
       data: {
         snapshot: perfSnapshot(),
-        latency: await measureKvLatency(),
+        latency: { avgReadMs, avgWriteMs } satisfies Latency,
       },
     };
   },
@@ -114,10 +128,24 @@ export default define.page<typeof handler>(function PerformancePage(
         />
       </div>
 
-      <h2 class={`${ADMIN_TYPE_SECTION} mb-3`}>KV latency (live probe)</h2>
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <h2 class={`${ADMIN_TYPE_SECTION} mb-3`}>KV latency</h2>
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
         <Metric label="Avg read" value={ms(latency.avgReadMs)} />
-        <Metric label="Avg write" value={ms(latency.avgWriteMs)} />
+        <Metric
+          label="Avg write"
+          value={latency.avgWriteMs === null
+            ? "not run"
+            : ms(latency.avgWriteMs)}
+        />
+      </div>
+      <div class="flex flex-wrap items-center gap-3 mb-8">
+        <p class={ADMIN_TYPE_META}>
+          Reads run on every visit. Write probe is opt-in so local Vite is
+          not stalled by SQLite WAL churn.
+        </p>
+        <a href="/admin/performance?writeProbe=1" class={ADMIN_BTN_SECONDARY}>
+          Run write probe
+        </a>
       </div>
 
       <h2 class={`${ADMIN_TYPE_SECTION} mb-3`}>In-memory caches</h2>

@@ -8,6 +8,7 @@ import { displayName, updateUserProfile } from "@/lib/users.ts";
 import { SocialLinksFields } from "@/components/SocialLinksFields.tsx";
 import FilePickField from "@/islands/FilePickField.tsx";
 import type { User } from "@/types/index.ts";
+import { mediaAdminPreviewUrl } from "@/lib/media-urls.ts";
 import {
   ADMIN_BTN_PRIMARY,
   ADMIN_INPUT,
@@ -191,7 +192,7 @@ export default define.page<typeof handler>(function ProfilePage({ data }) {
             buttonLabel="Choose avatar"
             hint="PNG, JPG, WebP, GIF or SVG"
             imagePreview
-            currentImageUrl={user.avatarUrl}
+            currentImageUrl={mediaAdminPreviewUrl(user.avatarUrl)}
           />
         </div>
         <SocialLinksFields links={user.socialLinks ?? []} />

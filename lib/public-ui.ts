@@ -5,13 +5,14 @@
  * Outer shell for header / main / footer. Same width everywhere so
  * brand, titles and footer never shift horizontally between pages.
  */
-export const PUBLIC_SHELL = "max-w-5xl mx-auto px-4 sm:px-6 w-full";
+export const PUBLIC_SHELL = "max-w-[84rem] mx-auto px-4 sm:px-6 w-full";
 
 /**
  * Reading column inside PUBLIC_SHELL (lists, full-width articles).
  * Left-aligned — not centered — so titles share the header’s left edge.
+ * ~40% wider than the previous max-w-3xl (48rem → 67.5rem).
  */
-export const PUBLIC_READING = "max-w-3xl w-full";
+export const PUBLIC_READING = "max-w-[67.5rem] w-full";
 
 /** @deprecated Use PUBLIC_SHELL + PUBLIC_READING */
 export const PUBLIC_CONTAINER = PUBLIC_SHELL;
@@ -57,6 +58,6 @@ export const PUBLIC_CARD =
   "bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg p-5 sm:p-6";
 
 export const PUBLIC_ASIDE =
-  "lg:w-64 shrink-0 space-y-8 lg:border-l lg:pl-8 border-gray-200 dark:border-gray-800";
+  "lg:w-72 shrink-0 space-y-8 lg:border-l lg:pl-8 border-gray-200 dark:border-gray-800";
 
 export const PUBLIC_MAIN_PY = "py-10 sm:py-12";

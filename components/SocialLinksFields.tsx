@@ -23,20 +23,23 @@ export function SocialLinksFields(
         Social links (platform and URL per row)
       </span>
       {rows.map((link, index) => (
-        <div class="flex gap-2 mb-2" key={index}>
+        <div
+          class="grid grid-cols-[minmax(7rem,11rem)_minmax(0,1fr)] gap-2 mb-2"
+          key={index}
+        >
           <input
             name="socialPlatform"
             type="text"
             value={link.platform}
             placeholder="Platform (e.g. GitHub)"
-            class={`${INPUT} w-1/3`}
+            class={INPUT}
           />
           <input
             name="socialUrl"
-            type="text"
+            type="url"
             value={link.url}
             placeholder="https://github.com/you"
-            class={`${INPUT} flex-1`}
+            class={INPUT}
           />
         </div>
       ))}

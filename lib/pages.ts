@@ -33,6 +33,19 @@ export async function listPages(): Promise<Page[]> {
   return pages.sort((a, b) => a.slug.localeCompare(b.slug));
 }
 
+/** Fields needed by pickers / menus (no Markdown body). */
+export type PageSummary = Omit<Page, "content">;
+
+function toPageSummary(page: Page): PageSummary {
+  const { content: _content, ...summary } = page;
+  return summary;
+}
+
+/** All pages without Markdown bodies. */
+export async function listPageSummaries(): Promise<PageSummary[]> {
+  return (await listPages()).map(toPageSummary);
+}
+
 export async function getPageBySlug(slug: string): Promise<Page | null> {
   return (await kv.get<Page>(KvKeys.page(slug))).value;
 }

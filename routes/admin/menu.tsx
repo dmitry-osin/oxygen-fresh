@@ -11,10 +11,14 @@ import {
   getMenuItems,
   reorderMenuItems,
 } from "@/lib/menu.ts";
-import { getPageBySlug, listPages } from "@/lib/pages.ts";
-import { getPublishedBySlug, listPublishedPosts } from "@/lib/posts.ts";
+import { getPageBySlug, listPageSummaries, type PageSummary } from "@/lib/pages.ts";
+import {
+  getPublishedBySlug,
+  listPublishedPostSummaries,
+  type PostSummary,
+} from "@/lib/posts.ts";
 import MenuBuilder from "@/islands/MenuBuilder.tsx";
-import type { MenuItem, Page, Post } from "@/types/index.ts";
+import type { MenuItem } from "@/types/index.ts";
 import {
   ADMIN_BTN_PRIMARY,
   ADMIN_CARD,
@@ -27,8 +31,8 @@ import {
 
 interface MenuData {
   items: MenuItem[];
-  pages: Page[];
-  posts: Post[];
+  pages: PageSummary[];
+  posts: PostSummary[];
   error: string | null;
 }
 
@@ -37,8 +41,8 @@ const INPUT = ADMIN_INPUT;
 async function menuData(error: string | null): Promise<MenuData> {
   const [items, pages, posts] = await Promise.all([
     getMenuItems(),
-    listPages(),
-    listPublishedPosts(),
+    listPageSummaries(),
+    listPublishedPostSummaries(),
   ]);
   return { items, pages, posts, error };
 }

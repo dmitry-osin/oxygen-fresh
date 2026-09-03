@@ -2,16 +2,13 @@
 // a previously exported file to replace everything (after validation),
 // and import posts from a WordPress XML / Ghost JSON export as drafts
 // (F23). Source: ai/requirements.md 358-362, 405-407, :474.
+//
+// Heavy parsers (turndown, fast-xml-parser, full import graph) load only
+// on POST — otherwise opening Backup in dev pays a multi-second cold
+// transform for modules the GET view never uses.
 
 import { Head } from "fresh/runtime";
 import { define } from "@/utils.ts";
-import { applyImport, validateImport } from "@/lib/import.ts";
-import {
-  type ExternalPost,
-  importExternalPosts,
-  parseGhostJson,
-  parseWordPressXml,
-} from "@/lib/import-external.ts";
 import ConfirmImport from "@/islands/ConfirmImport.tsx";
 import FilePickField from "@/islands/FilePickField.tsx";
 import {
@@ -38,13 +35,6 @@ function backupData(url: URL, error: string | null = null): BackupData {
   };
 }
 
-/** WordPress XML starts with "<", Ghost exports are JSON. */
-function parseExternal(text: string): ExternalPost[] {
-  return text.trimStart().startsWith("<")
-    ? parseWordPressXml(text)
-    : parseGhostJson(text);
-}
-
 export const handler = define.handlers({
   GET(ctx) {
     return { data: backupData(ctx.url) };
@@ -60,7 +50,15 @@ export const handler = define.handlers({
         return { data: backupData(ctx.url, "No file uploaded.") };
       }
       try {
-        const posts = parseExternal(await file.text());
+        const {
+          importExternalPosts,
+          parseGhostJson,
+          parseWordPressXml,
+        } = await import("@/lib/import-external.ts");
+        const text = await file.text();
+        const posts = text.trimStart().startsWith("<")
+          ? parseWordPressXml(text)
+          : parseGhostJson(text);
         if (posts.length === 0) {
           return { data: backupData(ctx.url, "No posts found in the file.") };
         }
@@ -90,6 +88,7 @@ export const handler = define.handlers({
     } catch {
       return { data: backupData(ctx.url, "File is not valid JSON.") };
     }
+    const { applyImport, validateImport } = await import("@/lib/import.ts");
     const result = validateImport(parsed);
     if (!result.ok) return { data: backupData(ctx.url, result.error) };
     await applyImport(result.data);

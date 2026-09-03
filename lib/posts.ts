@@ -71,6 +71,11 @@ export async function listAllPostSummaries(): Promise<PostSummary[]> {
   return posts;
 }
 
+/** Published posts without Markdown bodies (menus, pickers, indexes). */
+export async function listPublishedPostSummaries(): Promise<PostSummary[]> {
+  return (await listPublishedPosts()).map(toSummary);
+}
+
 /** Published posts + drafts for the admin list. */
 export async function listAllPosts(): Promise<Post[]> {
   const [published, drafts] = await Promise.all([
