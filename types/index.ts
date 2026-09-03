@@ -192,4 +192,8 @@ export interface RedirectEntry {
   from: string;
   to: string;
   code: 301 | 302;
+  /** Auto short links for posts (`/s/{code}`) vs manual Redirects admin entries. */
+  source?: "manual" | "short";
+  /** Post id when source is "short" — keeps the target in sync on slug change. */
+  postId?: string;
 }

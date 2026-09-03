@@ -25,16 +25,19 @@ import {
 
 function parsePageInput(form: FormData): PageInput {
   const get = (name: string) => String(form.get(name) ?? "").trim();
-  return {
+  const input: PageInput = {
     title: get("title"),
     slug: get("slug"),
-    content: String(form.get("content") ?? ""),
     template: get("template") === "full-width" ? "full-width" : "default",
     showInMenu: form.get("showInMenu") === "on",
     menuOrder: Number.parseInt(get("menuOrder") || "0", 10) || 0,
     metaTitle: get("metaTitle"),
     metaDescription: get("metaDescription"),
   };
+  if (form.has("content")) {
+    input.content = String(form.get("content") ?? "");
+  }
+  return input;
 }
 
 export const handler = define.handlers({

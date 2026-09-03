@@ -145,7 +145,7 @@ export async function updatePage(
     ...page,
     title: input.title.trim(),
     slug,
-    content: input.content ?? page.content,
+    content: input.content !== undefined ? input.content : page.content,
     template: input.template ?? page.template,
     showInMenu: input.showInMenu ?? page.showInMenu,
     menuOrder: input.menuOrder ?? page.menuOrder,

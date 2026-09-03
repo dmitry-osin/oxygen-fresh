@@ -1,11 +1,11 @@
-// Version history: read snapshots and restore them into new drafts.
-// Snapshots are written by lib/posts.ts on every publish.
+// Version history: read snapshots and restore them into the current post
+// (or into a new draft). Snapshots are written on every publish.
 // Source: ai/requirements.md F8 (section 7.1).
 
 import { kv, KvKeys } from "./kv.ts";
 import type { Post, PostSnapshot } from "@/types/index.ts";
-import { insertPost } from "./post-mutations.ts";
-import { uniqueSlug } from "./posts.ts";
+import { insertPost, updatePost } from "./post-mutations.ts";
+import { getPostById, type SaveResult, uniqueSlug } from "./posts.ts";
 import { nowIso } from "@/utils/date.ts";
 
 /** All snapshots of a post, newest first. */
@@ -24,6 +24,31 @@ export async function getVersion(
 ): Promise<PostSnapshot | null> {
   return (await kv.get<PostSnapshot>(KvKeys.postVersion(postId, versionId)))
     .value;
+}
+
+/**
+ * Apply a snapshot onto the existing post (title/body/intro/tags).
+ * Keeps id, slug, status and template. Source: History restore.
+ */
+export async function restoreVersionToPost(
+  postId: string,
+  versionId: string,
+): Promise<SaveResult> {
+  const [snapshot, post] = await Promise.all([
+    getVersion(postId, versionId),
+    getPostById(postId),
+  ]);
+  if (!snapshot || !post) {
+    return { ok: false, error: "Version or post not found." };
+  }
+  return await updatePost(postId, {
+    title: snapshot.title,
+    content: snapshot.content,
+    excerpt: snapshot.excerpt,
+    tags: [...snapshot.tags],
+    status: post.status === "scheduled" ? "scheduled" : "draft",
+    template: post.template,
+  });
 }
 
 /**

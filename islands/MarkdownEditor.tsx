@@ -37,10 +37,13 @@ export default function MarkdownEditor(props: EditorProps) {
   const content = useSignal(props.initialContent);
   const preview = useSignal("");
   const focusMode = useSignal(false);
+  const syncScroll = useSignal(false);
   const codeLang = useSignal("typescript");
   const mediaOpen = useSignal(false);
   const mediaFiles = useSignal<MediaFile[]>([]);
   const areaRef = useRef<HTMLTextAreaElement>(null);
+  const previewRef = useRef<HTMLDivElement>(null);
+  const syncingScroll = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout>>();
 
   async function updatePreview() {
@@ -60,6 +63,45 @@ export default function MarkdownEditor(props: EditorProps) {
   useEffect(() => {
     updatePreview();
   }, []);
+
+  // Ensure the live signal is flushed into the DOM before FormData is built.
+  // Controlled island textareas can otherwise submit a stale/empty value.
+  useEffect(() => {
+    const form = areaRef.current?.form ??
+      areaRef.current?.closest("form");
+    if (!form) return;
+    function onSubmit() {
+      const area = areaRef.current;
+      if (area) area.value = content.value;
+    }
+    form.addEventListener("submit", onSubmit);
+    return () => form.removeEventListener("submit", onSubmit);
+  }, []);
+
+  /** Keep the paired pane at the same scroll ratio (0–1). */
+  function mirrorScroll(source: HTMLElement, target: HTMLElement) {
+    if (!syncScroll.value || syncingScroll.current) return;
+    const sourceMax = source.scrollHeight - source.clientHeight;
+    const targetMax = target.scrollHeight - target.clientHeight;
+    if (sourceMax <= 0 || targetMax <= 0) return;
+    syncingScroll.current = true;
+    target.scrollTop = (source.scrollTop / sourceMax) * targetMax;
+    requestAnimationFrame(() => {
+      syncingScroll.current = false;
+    });
+  }
+
+  function onEditorScroll() {
+    const area = areaRef.current;
+    const pane = previewRef.current;
+    if (area && pane) mirrorScroll(area, pane);
+  }
+
+  function onPreviewScroll() {
+    const area = areaRef.current;
+    const pane = previewRef.current;
+    if (area && pane) mirrorScroll(pane, area);
+  }
 
   /** Wrap the current selection with prefix/suffix (bold, italic, code). */
   function applyWrap(prefix: string, suffix = prefix) {
@@ -128,6 +170,19 @@ export default function MarkdownEditor(props: EditorProps) {
     });
   }
 
+  function selectionToIntro() {
+    const area = areaRef.current;
+    if (!area) return;
+    const selected = area.value.slice(area.selectionStart, area.selectionEnd)
+      .trim();
+    if (!selected) return;
+    const intro = document.getElementById("excerpt");
+    if (!(intro instanceof HTMLTextAreaElement)) return;
+    intro.value = selected;
+    intro.dispatchEvent(new Event("input", { bubbles: true }));
+    intro.focus();
+  }
+
   const tools = [
     { label: "B", title: "Bold", run: () => applyWrap("**") },
     { label: "I", title: "Italic", run: () => applyWrap("*") },
@@ -179,11 +234,37 @@ export default function MarkdownEditor(props: EditorProps) {
         >
           Code
         </button>
+        <button
+          type="button"
+          title="Copy the selected text into Intro"
+          class={btnCls}
+          onClick={selectionToIntro}
+        >
+          To Intro
+        </button>
         <span class="flex-1" />
+        {!focusMode.value && (
+          <button
+            type="button"
+            title="Keep editor and preview scrolled together"
+            class={`${btnCls} ${
+              syncScroll.value
+                ? "bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900"
+                : ""
+            }`}
+            aria-pressed={syncScroll.value}
+            onClick={() => (syncScroll.value = !syncScroll.value)}
+          >
+            {syncScroll.value ? "Sync on" : "Sync scroll"}
+          </button>
+        )}
         <button
           type="button"
           class={btnCls}
-          onClick={() => (focusMode.value = !focusMode.value)}
+          onClick={() => {
+            focusMode.value = !focusMode.value;
+            if (focusMode.value) syncScroll.value = false;
+          }}
         >
           {focusMode.value ? "Show preview" : "Focus mode"}
         </button>
@@ -202,11 +283,14 @@ export default function MarkdownEditor(props: EditorProps) {
             content.value = e.currentTarget.value;
             schedulePreview();
           }}
-          class="w-full border border-gray-300 dark:border-gray-700 rounded px-3 py-2 font-mono bg-white dark:bg-gray-900"
+          onScroll={onEditorScroll}
+          class="w-full h-[42.5rem] max-h-[42.5rem] overflow-y-auto resize-none border border-gray-300 dark:border-gray-700 rounded px-3 py-2 font-mono bg-white dark:bg-gray-900"
         />
         {!focusMode.value && (
           <div
-            class="markdown-preview prose dark:prose-invert max-w-none border border-gray-200 dark:border-gray-700 rounded px-3 py-2 overflow-auto bg-white dark:bg-gray-900 min-h-[12rem]"
+            ref={previewRef}
+            onScroll={onPreviewScroll}
+            class="markdown-preview prose dark:prose-invert max-w-none border border-gray-200 dark:border-gray-700 rounded px-3 py-2 overflow-auto bg-white dark:bg-gray-900 h-[42.5rem] max-h-[42.5rem]"
             // deno-lint-ignore react-no-danger -- sanitized server-side by /api/preview (renderMarkdown)
             dangerouslySetInnerHTML={{ __html: preview.value }}
           />

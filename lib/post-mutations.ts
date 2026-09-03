@@ -16,6 +16,7 @@ import { isValidSlug } from "@/utils/validate.ts";
 import { nowIso } from "@/utils/date.ts";
 import { plainText } from "./markdown.ts";
 import { indexPost, unindexPost } from "./search.ts";
+import { deletePostShortLink, syncPostShortLink } from "./redirects.ts";
 
 /** Where a post lives: public space only when published. */
 function postKey(post: Post) {
@@ -94,23 +95,32 @@ function nextStatus(post: Post, input: PostInput): Post["status"] {
 }
 
 function applyInput(post: Post, input: PostInput): Post {
-  const content = input.content ?? post.content;
+  // Empty string is a valid clear; undefined means "field absent — keep".
+  const content = input.content !== undefined ? input.content : post.content;
   const status = nextStatus(post, input);
   return {
     ...post,
     title: input.title.trim(),
     slug: input.slug?.trim() || post.slug,
     content,
-    excerpt: input.excerpt?.trim() || plainText(content).slice(0, 200),
+    excerpt: input.excerpt !== undefined
+      ? (input.excerpt.trim() || plainText(content).slice(0, 200))
+      : post.excerpt,
     status,
     tags: input.tags ?? post.tags,
     template: input.template ?? post.template,
     publishedAt: status === "scheduled"
       ? input.publishedAt ?? post.publishedAt
       : post.publishedAt,
-    metaTitle: input.metaTitle?.trim() || undefined,
-    metaDescription: input.metaDescription?.trim() || undefined,
-    canonicalUrl: input.canonicalUrl?.trim() || undefined,
+    metaTitle: input.metaTitle !== undefined
+      ? (input.metaTitle.trim() || undefined)
+      : post.metaTitle,
+    metaDescription: input.metaDescription !== undefined
+      ? (input.metaDescription.trim() || undefined)
+      : post.metaDescription,
+    canonicalUrl: input.canonicalUrl !== undefined
+      ? (input.canonicalUrl.trim() || undefined)
+      : post.canonicalUrl,
     updatedAt: nowIso(),
   };
 }
@@ -130,7 +140,10 @@ export async function updatePost(
   }
   const updated = applyInput(post, input);
   await commitPost(updated, post);
-  if (updated.status === "published") await indexPost(updated);
+  if (updated.status === "published") {
+    await indexPost(updated);
+    await syncPostShortLink(updated.id, updated.slug);
+  }
   return { ok: true, post: updated };
 }
 
@@ -168,6 +181,7 @@ export async function unpublishPost(id: string): Promise<SaveResult> {
   const draft: Post = { ...post, status: "draft", updatedAt: nowIso() };
   await commitPost(draft, post);
   await unindexPost(draft.id);
+  await deletePostShortLink(draft.id);
   return { ok: true, post: draft };
 }
 
@@ -182,6 +196,7 @@ export async function deletePost(id: string): Promise<boolean> {
   invalidatePostSummaryCache();
   await removeFromList(KvKeys.postIds(), id);
   await unindexPost(id);
+  await deletePostShortLink(id);
   const iter = kv.list({ prefix: KvKeys.postVersionPrefix(id) });
   for await (const entry of iter) await kv.delete(entry.key);
   return true;

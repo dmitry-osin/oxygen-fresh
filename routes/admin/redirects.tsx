@@ -73,7 +73,7 @@ export default define.page<typeof handler>(function RedirectsPage({ data }) {
   return (
     <AdminPage
       title="Redirects"
-      description="Send visitors from old paths to new ones (301 permanent, 302 temporary)."
+      description="Send visitors from old paths to new ones (301 permanent, 302 temporary). Short links created from post editors also appear here."
     >
       <Head>
         <title>Redirects - Admin</title>
@@ -115,6 +115,7 @@ export default define.page<typeof handler>(function RedirectsPage({ data }) {
                   <th class={ADMIN_TH}>From</th>
                   <th class={ADMIN_TH}>To</th>
                   <th class={ADMIN_TH}>Code</th>
+                  <th class={ADMIN_TH}>Type</th>
                   <th class={ADMIN_TH_ACTIONS}>Actions</th>
                 </tr>
               </thead>
@@ -124,6 +125,9 @@ export default define.page<typeof handler>(function RedirectsPage({ data }) {
                     <td class={`${ADMIN_TD} font-mono`}>{entry.from}</td>
                     <td class={`${ADMIN_TD} font-mono`}>{entry.to}</td>
                     <td class={ADMIN_TD}>{entry.code}</td>
+                    <td class={ADMIN_TD}>
+                      {entry.source === "short" ? "short" : "manual"}
+                    </td>
                     <td class={ADMIN_TD_ACTIONS}>
                       <div class="flex justify-end">
                         <ConfirmDeleteTrigger

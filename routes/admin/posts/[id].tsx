@@ -11,15 +11,19 @@ import {
   unpublishPost,
   updatePost,
 } from "@/lib/post-mutations.ts";
-import { listVersions } from "@/lib/versions.ts";
+import { listVersions, restoreVersionToPost } from "@/lib/versions.ts";
 import { PostForm } from "@/components/PostForm.tsx";
 import { ConfirmDeleteTrigger } from "@/components/ConfirmDeleteTrigger.tsx";
 import { formatDateTime } from "@/utils/date.ts";
 import { slugify } from "@/utils/slugify.ts";
-import type { Post, PostSnapshot } from "@/types/index.ts";
+import type { Post, PostSnapshot, RedirectEntry } from "@/types/index.ts";
+import {
+  createPostShortLink,
+  deletePostShortLink,
+  findShortLinkForPost,
+} from "@/lib/redirects.ts";
 import {
   ADMIN_BTN_ROW,
-  ADMIN_BTN_SECONDARY,
   ADMIN_CARD,
   ADMIN_TABLE,
   ADMIN_TABLE_WRAP,
@@ -35,13 +39,16 @@ import {
   ADMIN_TYPE_ERROR,
   ADMIN_TYPE_MUTED,
   ADMIN_TYPE_PAGE_TITLE,
+  ADMIN_TYPE_SUCCESS,
 } from "@/components/AdminPage.tsx";
 
 interface EditorData {
   post: Post;
   tab: "edit" | "history";
   versions: PostSnapshot[];
+  shortLink: RedirectEntry | null;
   error: string | null;
+  notice: string | null;
 }
 
 function toIso(local: string): string | null {
@@ -60,10 +67,9 @@ function parsePostInput(form: FormData): PostInput {
     : statusRaw === "published"
     ? "published"
     : "draft";
-  return {
+  const input: PostInput = {
     title: get("title"),
     slug: get("slug"),
-    content: String(form.get("content") ?? ""),
     excerpt: get("excerpt"),
     status,
     tags: parseTags(get("tags")),
@@ -73,12 +79,20 @@ function parsePostInput(form: FormData): PostInput {
     metaDescription: get("metaDescription"),
     canonicalUrl: get("canonicalUrl"),
   };
+  // Only overwrite body when the editor field was actually posted.
+  // A missing field used to become "" and wipe published content.
+  if (form.has("content")) {
+    input.content = String(form.get("content") ?? "");
+  }
+  return input;
 }
 
 async function handleSimpleAction(
   action: string,
   id: string,
-): Promise<Response> {
+  post: Post,
+  form: FormData,
+): Promise<Response | { data: EditorData } | null> {
   if (action === "delete") {
     await deletePost(id);
     return new Response(null, {
@@ -86,11 +100,50 @@ async function handleSimpleAction(
       headers: { location: "/admin/posts" },
     });
   }
-  await unpublishPost(id);
-  return new Response(null, {
-    status: 303,
-    headers: { location: `/admin/posts/${id}` },
-  });
+  if (action === "unpublish") {
+    await unpublishPost(id);
+    return new Response(null, {
+      status: 303,
+      headers: { location: `/admin/posts/${id}` },
+    });
+  }
+  if (action === "create-short") {
+    if (post.status === "published") {
+      await createPostShortLink(post.id, post.slug);
+    }
+    return new Response(null, {
+      status: 303,
+      headers: { location: `/admin/posts/${id}` },
+    });
+  }
+  if (action === "delete-short") {
+    await deletePostShortLink(id);
+    return new Response(null, {
+      status: 303,
+      headers: { location: `/admin/posts/${id}` },
+    });
+  }
+  if (action === "restore-version") {
+    const versionId = String(form.get("versionId") ?? "");
+    const restored = await restoreVersionToPost(id, versionId);
+    if (!restored.ok) {
+      return {
+        data: {
+          post,
+          tab: "history",
+          versions: await listVersions(id),
+          shortLink: await findShortLinkForPost(id),
+          error: restored.error,
+          notice: null,
+        },
+      };
+    }
+    return new Response(null, {
+      status: 303,
+      headers: { location: `/admin/posts/${id}?restored=1` },
+    });
+  }
+  return null;
 }
 
 export const handler = define.handlers({
@@ -100,8 +153,23 @@ export const handler = define.handlers({
     const tab = ctx.url.searchParams.get("tab") === "history"
       ? "history"
       : "edit";
-    const versions = tab === "history" ? await listVersions(post.id) : [];
-    return { data: { post, tab, versions, error: null } };
+    const [versions, shortLink] = await Promise.all([
+      tab === "history" ? listVersions(post.id) : Promise.resolve([]),
+      findShortLinkForPost(post.id),
+    ]);
+    const restored = ctx.url.searchParams.get("restored") === "1";
+    return {
+      data: {
+        post,
+        tab,
+        versions,
+        shortLink,
+        error: null,
+        notice: restored
+          ? "Version restored into this post. Review and save/publish as needed."
+          : null,
+      },
+    };
   },
 
   async POST(ctx) {
@@ -110,14 +178,20 @@ export const handler = define.handlers({
     if (!post) throw new HttpError(404);
     const form = await ctx.req.formData();
     const action = String(form.get("action") ?? "save");
-    if (action === "delete" || action === "unpublish") {
-      return await handleSimpleAction(action, id);
-    }
+    const simple = await handleSimpleAction(action, id, post, form);
+    if (simple) return simple;
 
     const saved = await updatePost(id, parsePostInput(form));
     if (!saved.ok) {
       return {
-        data: { post, tab: "edit" as const, versions: [], error: saved.error },
+        data: {
+          post,
+          tab: "edit" as const,
+          versions: [],
+          shortLink: await findShortLinkForPost(id),
+          error: saved.error,
+          notice: null,
+        },
       };
     }
     if (action === "publish") {
@@ -128,7 +202,9 @@ export const handler = define.handlers({
             post: saved.post,
             tab: "edit" as const,
             versions: [],
+            shortLink: await findShortLinkForPost(id),
             error: published.error,
+            notice: null,
           },
         };
       }
@@ -201,12 +277,24 @@ function HistoryTable(
                 <td class={ADMIN_TD}>{v.title}</td>
                 <td class={ADMIN_TD_MUTED}>{v.tags.join(", ")}</td>
                 <td class={ADMIN_TD}>
-                  <a
-                    href={`/admin/posts/${post.id}/versions/${v.versionId}`}
-                    class={ADMIN_TITLE_LINK}
-                  >
-                    View
-                  </a>
+                  <div class="flex flex-wrap items-center justify-end gap-2">
+                    <a
+                      href={`/admin/posts/${post.id}/versions/${v.versionId}`}
+                      class={ADMIN_TITLE_LINK}
+                    >
+                      View
+                    </a>
+                    <ConfirmDeleteTrigger
+                      itemName={`${formatDateTime(v.versionId)} — ${v.title}`}
+                      action="restore-version"
+                      versionId={v.versionId}
+                      label="Restore"
+                      size="sm"
+                      confirmTone="primary"
+                      confirmLabel="Restore"
+                      confirmMessage="This replaces the current title, body, intro and tags with this version. The URL slug and publish status stay the same."
+                    />
+                  </div>
                 </td>
               </tr>
             ))}
@@ -218,7 +306,7 @@ function HistoryTable(
 }
 
 export default define.page<typeof handler>(function PostEditor({ data }) {
-  const { post, tab, versions, error } = data;
+  const { post, tab, versions, shortLink, error, notice } = data;
   const tabCls = (active: boolean) =>
     `px-3 py-2 rounded-md ${ADMIN_TYPE_BODY} ${
       active
@@ -257,37 +345,11 @@ export default define.page<typeof handler>(function PostEditor({ data }) {
         </nav>
       </div>
 
+      {notice && <p class={`${ADMIN_TYPE_SUCCESS} mb-4`}>{notice}</p>}
       {error && <p class={`${ADMIN_TYPE_ERROR} mb-4`}>{error}</p>}
 
       {tab === "edit"
-        ? (
-          <>
-            <PostForm post={post} />
-            <div
-              class={`${ADMIN_CARD} flex flex-wrap items-center gap-2 mt-6`}
-            >
-              {post.status === "published" && (
-                <>
-                  <a
-                    href={`/${post.slug}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class={ADMIN_BTN_SECONDARY}
-                  >
-                    View post
-                  </a>
-                  <form method="post">
-                    <input type="hidden" name="action" value="unpublish" />
-                    <button type="submit" class={ADMIN_BTN_SECONDARY}>
-                      Unpublish
-                    </button>
-                  </form>
-                </>
-              )}
-              <ConfirmDeleteTrigger itemName={post.title} />
-            </div>
-          </>
-        )
+        ? <PostForm post={post} shortLink={shortLink} />
         : <HistoryTable post={post} versions={versions} />}
     </div>
   );

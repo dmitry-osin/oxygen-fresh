@@ -1,13 +1,14 @@
-// Post editor form: grouped cards for content, publishing and SEO.
-// Tags use chip input; Publish at defaults to now when empty.
+// Post editor form: title/slug + publishing beside SEO, then Markdown body.
 // Source: ai/requirements.md 5.1, F1. MarkdownEditor island (F4).
 
 import type { ComponentChildren } from "preact";
-import type { Post } from "@/types/index.ts";
+import type { Post, RedirectEntry } from "@/types/index.ts";
 import SlugField from "@/islands/SlugField.tsx";
 import MarkdownEditor from "@/islands/MarkdownEditor.tsx";
 import TagInput from "@/islands/TagInput.tsx";
 import UnsavedChangesGuard from "@/islands/UnsavedChangesGuard.tsx";
+import { PostShortLinkPanel, SHORT_LINK_FORM_ID } from "@/components/PostShortLinkPanel.tsx";
+import { ConfirmDeleteTrigger } from "@/components/ConfirmDeleteTrigger.tsx";
 import {
   ADMIN_BTN_PRIMARY,
   ADMIN_BTN_SECONDARY,
@@ -37,9 +38,10 @@ function FieldSection(props: {
   title: string;
   description?: string;
   children: ComponentChildren;
+  class?: string;
 }) {
   return (
-    <section class={`${ADMIN_CARD} space-y-4`}>
+    <section class={`${ADMIN_CARD} space-y-4 ${props.class ?? ""}`}>
       <div>
         <h2 class={ADMIN_TYPE_CARD_TITLE}>{props.title}</h2>
         {props.description && (
@@ -51,191 +53,232 @@ function FieldSection(props: {
   );
 }
 
-export function PostForm({ post }: { post: Post }) {
+export function PostForm(
+  { post, shortLink = null }: { post: Post; shortLink?: RedirectEntry | null },
+) {
   return (
-    <form method="post" class="space-y-6">
-      <UnsavedChangesGuard />
-      <FieldSection
-        title="Content"
-        description="Title, URL slug and Markdown body."
-      >
-        <div>
-          <label class={labelCls} for="title">Title</label>
-          <input
-            id="title"
-            name="title"
-            type="text"
-            required
-            value={post.title}
-            class={inputCls}
-          />
-        </div>
-        <div>
-          <label class={labelCls}>Slug</label>
-          <SlugField initialValue={post.slug} excludeId={post.id} />
-          {post.status === "published" && (
-            <p class={`${ADMIN_TYPE_WARN} mt-1`}>
-              Warning: changing the slug breaks existing URLs.
-            </p>
-          )}
-        </div>
-        <div>
-          <label class={labelCls} for="content">Content (Markdown)</label>
-          <MarkdownEditor initialContent={post.content} />
-        </div>
-        <div>
-          <label class={labelCls} for="excerpt">Excerpt</label>
-          <textarea
-            id="excerpt"
-            name="excerpt"
-            rows={2}
-            class={inputCls}
-            placeholder="Auto-generated from content when empty"
-          >
-            {post.excerpt}
-          </textarea>
-        </div>
-      </FieldSection>
+    <div class="space-y-6">
+      {post.status === "published" && (
+        <form id={SHORT_LINK_FORM_ID} method="post" class="hidden" />
+      )}
 
-      <FieldSection
-        title="Publishing"
-        description="Tags, status, schedule and layout template."
-      >
-        <div>
-          <label class={labelCls}>Tags</label>
-          <TagInput initialTags={post.tags} />
-        </div>
-        <div class="grid gap-4 sm:grid-cols-2">
-          <div>
-            <label class={labelCls} for="status">Status</label>
-            {post.status === "published"
-              ? (
-                <>
-                  <input type="hidden" name="status" value="published" />
-                  <p
-                    class={`${inputCls} bg-gray-50 dark:bg-gray-950 text-gray-700 dark:text-gray-300`}
+      <form method="post" class="space-y-6">
+        <UnsavedChangesGuard />
+
+        <div class="grid gap-6 xl:grid-cols-2 items-start">
+          <FieldSection
+            title="Publishing"
+            description="Title, slug, status, tags and intro."
+          >
+            <div>
+              <label class={labelCls} for="title">Title</label>
+              <input
+                id="title"
+                name="title"
+                type="text"
+                required
+                value={post.title}
+                class={inputCls}
+              />
+            </div>
+            <div>
+              <label class={labelCls}>Slug</label>
+              <SlugField initialValue={post.slug} excludeId={post.id} />
+              {post.status === "published" && (
+                <p class={`${ADMIN_TYPE_WARN} mt-1`}>
+                  Warning: changing the slug breaks existing URLs.
+                </p>
+              )}
+            </div>
+            <div class="grid gap-3 sm:grid-cols-3">
+              <div>
+                <label class={labelCls} for="status">Status</label>
+                <div class="flex flex-wrap items-center gap-2">
+                  {post.status === "published"
+                    ? (
+                      <>
+                        <input type="hidden" name="status" value="published" />
+                        <p
+                          class={`${inputCls} flex-1 min-w-28 bg-gray-50 dark:bg-gray-950 text-gray-700 dark:text-gray-300`}
+                        >
+                          published
+                        </p>
+                        <button
+                          type="submit"
+                          name="action"
+                          value="unpublish"
+                          class={ADMIN_BTN_SECONDARY}
+                        >
+                          Unpublish
+                        </button>
+                      </>
+                    )
+                    : (
+                      <select
+                        id="status"
+                        name="status"
+                        class={inputCls}
+                      >
+                        <option
+                          value="draft"
+                          selected={post.status === "draft"}
+                        >
+                          draft
+                        </option>
+                        <option
+                          value="scheduled"
+                          selected={post.status === "scheduled"}
+                        >
+                          scheduled
+                        </option>
+                      </select>
+                    )}
+                </div>
+              </div>
+              <div>
+                <label class={labelCls} for="template">Template</label>
+                <select id="template" name="template" class={inputCls}>
+                  <option
+                    value="default"
+                    selected={post.template === "default"}
                   >
-                    published
-                  </p>
-                  <p class={`${ADMIN_TYPE_MUTED} mt-1`}>
-                    Use Unpublish below to return to draft.
-                  </p>
-                </>
-              )
-              : (
-                <select id="status" name="status" class={inputCls}>
-                  <option value="draft" selected={post.status === "draft"}>
-                    draft
+                    default
                   </option>
                   <option
-                    value="scheduled"
-                    selected={post.status === "scheduled"}
+                    value="full-width"
+                    selected={post.template === "full-width"}
                   >
-                    scheduled
+                    full-width
                   </option>
                 </select>
-              )}
-          </div>
-          <div>
-            <label class={labelCls} for="template">Template</label>
-            <select id="template" name="template" class={inputCls}>
-              <option value="default" selected={post.template === "default"}>
-                default (with sidebar)
-              </option>
-              <option
-                value="full-width"
-                selected={post.template === "full-width"}
+              </div>
+              <div>
+                <label class={labelCls} for="publishedAt">Publish at</label>
+                <input
+                  id="publishedAt"
+                  name="publishedAt"
+                  type="datetime-local"
+                  value={toDatetimeLocal(post.publishedAt)}
+                  class={inputCls}
+                />
+              </div>
+            </div>
+            {post.status !== "published" && (
+              <p class={ADMIN_TYPE_MUTED}>
+                Publish at is used when status is scheduled. Defaults to now.
+              </p>
+            )}
+            <div>
+              <label class={labelCls}>Tags</label>
+              <TagInput initialTags={post.tags} />
+            </div>
+            <div>
+              <label class={labelCls} for="excerpt">Intro</label>
+              <textarea
+                id="excerpt"
+                name="excerpt"
+                rows={2}
+                class={inputCls}
+                placeholder="Auto-generated from content when empty. Use “To Intro” in the editor toolbar to fill from a selection."
               >
-                full-width
-              </option>
-            </select>
+                {post.excerpt}
+              </textarea>
+            </div>
+          </FieldSection>
+
+          <div class="space-y-6">
+            <FieldSection
+              title="SEO"
+              description="Optional overrides for search and sharing."
+            >
+              <div>
+                <label class={labelCls} for="metaTitle">Meta title</label>
+                <input
+                  id="metaTitle"
+                  name="metaTitle"
+                  type="text"
+                  value={post.metaTitle ?? ""}
+                  class={inputCls}
+                  placeholder="Defaults to the post title"
+                />
+              </div>
+              <div>
+                <label class={labelCls} for="metaDescription">
+                  Meta description
+                </label>
+                <textarea
+                  id="metaDescription"
+                  name="metaDescription"
+                  rows={3}
+                  class={inputCls}
+                  placeholder="Defaults to the intro"
+                >
+                  {post.metaDescription ?? ""}
+                </textarea>
+              </div>
+              <div>
+                <label class={labelCls} for="canonicalUrl">Canonical URL</label>
+                <input
+                  id="canonicalUrl"
+                  name="canonicalUrl"
+                  type="text"
+                  value={post.canonicalUrl ?? ""}
+                  class={inputCls}
+                  placeholder="https://…"
+                />
+              </div>
+            </FieldSection>
+
+            {post.status === "published" && (
+              <PostShortLinkPanel shortLink={shortLink} />
+            )}
           </div>
         </div>
-        <div>
-          <label class={labelCls} for="publishedAt">Publish at</label>
-          <input
-            id="publishedAt"
-            name="publishedAt"
-            type="datetime-local"
-            value={toDatetimeLocal(post.publishedAt)}
-            class={inputCls}
-          />
-          <p class={`${ADMIN_TYPE_MUTED} mt-1`}>
-            Used when status is scheduled. Defaults to now.
-          </p>
-        </div>
-      </FieldSection>
 
-      <FieldSection
-        title="SEO"
-        description="Optional overrides for search and sharing."
-      >
-        <div>
-          <label class={labelCls} for="metaTitle">Meta title</label>
-          <input
-            id="metaTitle"
-            name="metaTitle"
-            type="text"
-            value={post.metaTitle ?? ""}
-            class={inputCls}
-            placeholder="Defaults to the post title"
-          />
-        </div>
-        <div>
-          <label class={labelCls} for="metaDescription">Meta description</label>
-          <textarea
-            id="metaDescription"
-            name="metaDescription"
-            rows={2}
-            class={inputCls}
-            placeholder="Defaults to the excerpt"
-          >
-            {post.metaDescription ?? ""}
-          </textarea>
-        </div>
-        <div>
-          <label class={labelCls} for="canonicalUrl">Canonical URL</label>
-          <input
-            id="canonicalUrl"
-            name="canonicalUrl"
-            type="text"
-            value={post.canonicalUrl ?? ""}
-            class={inputCls}
-            placeholder="https://…"
-          />
-        </div>
-      </FieldSection>
+        <FieldSection
+          title="Content"
+          description="Markdown body."
+        >
+          <div>
+            <label class={labelCls} for="content">Content (Markdown)</label>
+            <MarkdownEditor initialContent={post.content} />
+          </div>
+        </FieldSection>
 
-      <div
-        class={`${ADMIN_CARD} flex flex-wrap items-center gap-2 sticky bottom-4 z-10 shadow-sm`}
-      >
-        <button
-          type="submit"
-          name="action"
-          value="save"
-          class={ADMIN_BTN_PRIMARY}
+        <div
+          class={`${ADMIN_CARD} flex flex-wrap items-center gap-2 sticky bottom-4 z-10 shadow-sm`}
         >
-          {post.status === "published" ? "Save" : "Save draft"}
-        </button>
-        <button
-          type="submit"
-          name="action"
-          value="publish"
-          class={ADMIN_BTN_SUCCESS}
-        >
-          {post.status === "published" ? "Publish new version" : "Publish"}
-        </button>
-        {post.status === "published" && (
-          <a
-            href={`/${post.slug}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            class={ADMIN_BTN_SECONDARY}
+          <button
+            type="submit"
+            name="action"
+            value="save"
+            class={ADMIN_BTN_PRIMARY}
           >
-            View post
-          </a>
-        )}
-      </div>
-    </form>
+            {post.status === "published" ? "Save" : "Save draft"}
+          </button>
+          <button
+            type="submit"
+            name="action"
+            value="publish"
+            class={ADMIN_BTN_SUCCESS}
+          >
+            {post.status === "published" ? "Publish new version" : "Publish"}
+          </button>
+          {post.status === "published" && (
+            <a
+              href={`/${post.slug}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              class={ADMIN_BTN_SECONDARY}
+            >
+              View post
+            </a>
+          )}
+          <div class="ml-auto">
+            <ConfirmDeleteTrigger itemName={post.title} />
+          </div>
+        </div>
+      </form>
+    </div>
   );
 }

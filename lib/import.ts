@@ -171,15 +171,23 @@ export function validateImport(raw: unknown): ImportResult {
   if (typeof menu === "string") return { ok: false, error: menu };
   const redirects = validateList(
     raw.data.redirects,
-    (item) =>
-      isRecord(item) && hasStrings(item, ["from", "to"]) &&
-        validateRedirect(
-          String(item.from),
-          String(item.to),
-          Number(item.code),
-        )
-        ? item as unknown as RedirectEntry
-        : null,
+    (item) => {
+      if (!isRecord(item) || !hasStrings(item, ["from", "to"])) return null;
+      const base = validateRedirect(
+        String(item.from),
+        String(item.to),
+        Number(item.code),
+      );
+      if (!base) return null;
+      const entry: RedirectEntry = { ...base };
+      if (item.source === "short") {
+        entry.source = "short";
+        if (typeof item.postId === "string" && item.postId) {
+          entry.postId = item.postId;
+        }
+      }
+      return entry;
+    },
     "redirects",
   );
   if (typeof redirects === "string") return { ok: false, error: redirects };
