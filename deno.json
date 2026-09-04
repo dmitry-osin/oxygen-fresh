@@ -39,7 +39,6 @@
     "preact": "npm:preact@^10.29.1",
     "@preact/signals": "npm:@preact/signals@^2.9.0",
     "@fresh/plugin-vite": "jsr:@fresh/plugin-vite@^1.1.2",
-    "@tailwindcss/oxide-linux-x64-musl": "npm:@tailwindcss/oxide-linux-x64-musl@^4.3.3",
     "sanitize-html": "npm:sanitize-html@^2.17.7",
     "turndown": "npm:turndown@^7.2.4",
     "vite": "npm:vite@^7.1.3",

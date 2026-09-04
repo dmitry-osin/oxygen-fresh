@@ -1,4 +1,4 @@
-# Single-stage production image on Deno Alpine.
+# Single-stage production image on the glibc-based Deno image.
 # Source: ai/requirements.md 35-44 (section 3.1/3.2).
 # All configuration comes from environment variables (12-factor);
 # /app/data (KV) and /app/static/uploads (media) are Docker volumes.
@@ -7,7 +7,7 @@
 # (ADMIN_PASSWORD_HASH + optional ADMIN_* profile) and site settings
 # (SITE_NAME, THEME, GISCUS_*, CONTACT_*, …). Later admin UI edits win.
 
-FROM denoland/deno:alpine-2.9.6
+FROM denoland/deno:2.9.6
 
 # Image may default to the non-root `deno` user; build steps need write
 # access to /app (node_modules, _fresh). Stay root for build + runtime so
