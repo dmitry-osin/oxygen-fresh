@@ -53,7 +53,7 @@ export interface Page {
   title: string;
   /** Markdown source */
   content: string;
-  template: "default" | "full-width";
+  template: "default" | "full-width" | "blank";
   /** Whether this page appears in navigation */
   showInMenu: boolean;
   /** Sort order in menu (if showInMenu = true) */

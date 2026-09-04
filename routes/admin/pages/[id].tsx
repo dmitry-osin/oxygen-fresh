@@ -25,10 +25,16 @@ import {
 
 function parsePageInput(form: FormData): PageInput {
   const get = (name: string) => String(form.get(name) ?? "").trim();
+  const templateRaw = get("template");
+  const template: PageInput["template"] = templateRaw === "blank"
+    ? "blank"
+    : templateRaw === "full-width"
+    ? "full-width"
+    : "default";
   const input: PageInput = {
     title: get("title"),
     slug: get("slug"),
-    template: get("template") === "full-width" ? "full-width" : "default",
+    template,
     showInMenu: form.get("showInMenu") === "on",
     menuOrder: Number.parseInt(get("menuOrder") || "0", 10) || 0,
     metaTitle: get("metaTitle"),

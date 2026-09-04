@@ -1,4 +1,5 @@
 // Static page renderer: /page/:slug. Template switch like posts (F7).
+// template "blank" returns a standalone HTML document (no blog chrome).
 
 import { Head } from "fresh/runtime";
 import { HttpError } from "fresh";
@@ -7,6 +8,11 @@ import { getPageBySlug } from "@/lib/pages.ts";
 import { getNavLinks } from "@/lib/menu.ts";
 import { getSettings } from "@/lib/settings.ts";
 import { trackView } from "@/lib/analytics.ts";
+import {
+  BLANK_PAGE_CSP,
+  BLANK_PAGE_HEADER,
+  renderBlankPageHtml,
+} from "@/lib/blank-page.ts";
 import { renderMarkdown } from "@/lib/markdown.ts";
 import { canonicalUrl } from "@/lib/seo.ts";
 import { PublicLayout } from "@/components/PublicLayout.tsx";
@@ -26,6 +32,18 @@ import { parseCalendarMonth } from "@/utils/date.ts";
 export const handler = define.handlers(async (ctx) => {
   const page = await getPageBySlug(ctx.params.slug);
   if (!page) throw new HttpError(404);
+
+  if (page.template === "blank") {
+    await trackView("page", page.id);
+    return new Response(renderBlankPageHtml(page), {
+      headers: {
+        "content-type": "text/html; charset=utf-8",
+        [BLANK_PAGE_HEADER]: "1",
+        "Content-Security-Policy": BLANK_PAGE_CSP,
+      },
+    });
+  }
+
   const [settings, navLinks, recentPosts, tags] = await Promise.all([
     getSettings(),
     getNavLinks(),

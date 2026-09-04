@@ -1,10 +1,10 @@
-// Page editor form: navigation beside SEO, then Markdown body.
+// Page editor form: navigation beside SEO, then Markdown or blank HTML body.
 // Source: ai/requirements.md F2, UI rules 5.1.
 
 import type { ComponentChildren } from "preact";
 import type { Page } from "@/types/index.ts";
 import SlugField from "@/islands/SlugField.tsx";
-import MarkdownEditor from "@/islands/MarkdownEditor.tsx";
+import PageBodyEditor from "@/islands/PageBodyEditor.tsx";
 import UnsavedChangesGuard from "@/islands/UnsavedChangesGuard.tsx";
 import {
   ADMIN_BTN_PRIMARY,
@@ -83,31 +83,15 @@ export function PageForm(
               Warning: changing the slug breaks existing URLs.
             </p>
           </div>
-          <div class="grid gap-3 sm:grid-cols-2">
-            <div>
-              <label class={labelCls} for="template">Template</label>
-              <select id="template" name="template" class={inputCls}>
-                <option value="default" selected={page.template === "default"}>
-                  default
-                </option>
-                <option
-                  value="full-width"
-                  selected={page.template === "full-width"}
-                >
-                  full-width
-                </option>
-              </select>
-            </div>
-            <div>
-              <label class={labelCls} for="menuOrder">Menu order</label>
-              <input
-                id="menuOrder"
-                type="number"
-                name="menuOrder"
-                value={page.menuOrder}
-                class={inputCls}
-              />
-            </div>
+          <div>
+            <label class={labelCls} for="menuOrder">Menu order</label>
+            <input
+              id="menuOrder"
+              type="number"
+              name="menuOrder"
+              value={page.menuOrder}
+              class={inputCls}
+            />
           </div>
           <label class={ADMIN_TYPE_INLINE_LABEL}>
             <input
@@ -153,12 +137,12 @@ export function PageForm(
 
       <FieldSection
         title="Content"
-        description="Markdown body."
+        description="Markdown in the blog layout, or standalone HTML."
       >
-        <div>
-          <label class={labelCls} for="content">Content (Markdown)</label>
-          <MarkdownEditor initialContent={page.content} />
-        </div>
+        <PageBodyEditor
+          initialTemplate={page.template}
+          initialContent={page.content}
+        />
       </FieldSection>
 
       <div

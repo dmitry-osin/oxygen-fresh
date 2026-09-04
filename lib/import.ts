@@ -28,7 +28,8 @@ export type ImportResult =
   | { ok: false; error: string };
 
 const POST_STATUSES = new Set(["draft", "published", "scheduled"]);
-const TEMPLATES = new Set(["default", "full-width"]);
+const POST_TEMPLATES = new Set(["default", "full-width"]);
+const PAGE_TEMPLATES = new Set(["default", "full-width", "blank"]);
 const ITEM_TYPES = new Set(["page", "post", "external"]);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -56,7 +57,7 @@ function validatePost(item: unknown): Post | null {
     "authorId",
   ]) &&
     POST_STATUSES.has(String(item.status)) &&
-    (item.template === undefined || TEMPLATES.has(String(item.template))) &&
+    (item.template === undefined || POST_TEMPLATES.has(String(item.template))) &&
     isStringArray(item.tags) &&
     (item.publishedAt === null ||
       item.publishedAt === undefined ||
@@ -74,7 +75,7 @@ function validatePage(item: unknown): Page | null {
     "createdAt",
     "updatedAt",
   ]) &&
-    (item.template === undefined || TEMPLATES.has(String(item.template))) &&
+    (item.template === undefined || PAGE_TEMPLATES.has(String(item.template))) &&
     typeof item.showInMenu === "boolean" &&
     typeof item.menuOrder === "number";
   return ok ? item as unknown as Page : null;

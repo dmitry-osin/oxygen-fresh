@@ -7,11 +7,13 @@ SQLite file, user uploads on a volume, Nginx with TLS in front. No Deno Deploy
 ## 1. Build and run the container
 
 CI (`.github/workflows/docker.yml`) builds the image on every PR and pushes to
-GitHub Container Registry on pushes to `main` and tags `v*`:
+GitHub Container Registry on pushes to `main`/`master`, tags `v*`, and manual
+`workflow_dispatch`:
 
 ```text
 ghcr.io/<owner>/<repo>:latest
 ghcr.io/<owner>/<repo>:sha-<short-sha>
+ghcr.io/<owner>/<repo>:main
 ghcr.io/<owner>/<repo>:1.2.3   # from tag v1.2.3
 ```
 

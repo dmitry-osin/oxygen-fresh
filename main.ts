@@ -1,6 +1,7 @@
 import { App, csp, staticFiles } from "fresh";
 import { type State } from "./utils.ts";
 import { bootstrap } from "./lib/bootstrap.ts";
+import { BLANK_PAGE_CSP } from "./lib/blank-page.ts";
 import { startScheduler } from "./lib/scheduler.ts";
 
 export const app = new App<State>();
@@ -12,8 +13,14 @@ app.use(staticFiles());
 // blocks those styles and leaves the UI unstyled. Restore unsafe-inline
 // for style-src after the CSP middleware runs (registered first so it
 // patches the header on the way out).
+// Blank HTML pages set X-Oxygen-Blank-Page and need their own CSP so
+// inline <style>/<script> in admin-authored HTML can run.
 app.use(async (ctx) => {
   const res = await ctx.next();
+  if (res.headers.get("X-Oxygen-Blank-Page") === "1") {
+    res.headers.set("Content-Security-Policy", BLANK_PAGE_CSP);
+    return res;
+  }
   const header = res.headers.get("Content-Security-Policy");
   if (header?.includes("style-src")) {
     res.headers.set(

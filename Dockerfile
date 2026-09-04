@@ -7,7 +7,12 @@
 # (ADMIN_PASSWORD_HASH + optional ADMIN_* profile) and site settings
 # (SITE_NAME, THEME, GISCUS_*, CONTACT_*, …). Later admin UI edits win.
 
-FROM denoland/deno:alpine
+FROM denoland/deno:2.9.6-alpine
+
+# Image may default to the non-root `deno` user; build steps need write
+# access to /app (node_modules, _fresh). Stay root for build + runtime so
+# bind-mounted volumes work without chown on the host.
+USER root
 
 WORKDIR /app
 
@@ -51,7 +56,7 @@ ENV SITE_NAME=oxygen-blog \
 EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-  CMD ["deno", "eval", "--allow-net", "--allow-env", "const p = Deno.env.get(\"PORT\") ?? \"8000\"; const r = await fetch(\"http://127.0.0.1:\" + p + \"/\"); Deno.exit(r.ok ? 0 : 1);"]
+  CMD deno eval --allow-net --allow-env "const p=Deno.env.get('PORT')??'8000';Deno.exit((await fetch('http://127.0.0.1:'+p+'/')).ok?0:1)"
 
 # Scoped permissions: network (serve), env (config), read/write (KV,
 # uploads, static). No subprocess, no ffi, no host-wide access.

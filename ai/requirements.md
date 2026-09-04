@@ -310,9 +310,13 @@ interface Session {
 - Public site reads menu on every render (cached in memory for 60s)
 
 #### F7 — Templates
-- Two built-in templates: `default` (with sidebar) and `full-width` (no sidebar)
+- Posts: `default` (with sidebar) and `full-width` (no sidebar)
+- Pages: same plus `blank` — standalone HTML document with no blog chrome;
+  CSS/JS live in the page markup (`<style>` / `<script>`). Menu can still
+  link to `/page/:slug`. Blank responses use a relaxed CSP (admin-only write).
 - Template selection in post/page editor
-- Template affects layout rendering in `routes/[slug].tsx` and `routes/page/[slug].tsx`
+- Template affects layout rendering in `routes/[slug].tsx` and
+  `routes/page/[slug].tsx`
 
 #### F8 — Version History (Snapshot on Publish)
 - Every time a post is published (or re-published), an immutable `PostSnapshot` is saved

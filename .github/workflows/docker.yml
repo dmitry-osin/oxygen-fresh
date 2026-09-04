@@ -1,34 +1,47 @@
-# Build the production Docker image; push to GHCR on main and version tags.
-name: Docker
+# ─────────────────────────────────────────────────────────────────────────────
+# oxygen-blog — сборка и публикация Docker-образа в GitHub Container Registry.
+#
+# Образ:
+#   ghcr.io/<owner>/<repo>  — Deno + Fresh production server
+#
+# Триггеры:
+#   - push в main/master          → теги: latest, sha-<commit>, <branch>
+#   - теги вида v1.2.3            → теги: 1.2.3, 1.2, latest
+#   - pull_request                → только сборка (без push)
+#   - вручную (Actions → Run workflow)
+#
+# Для публикации в GHCR дополнительной настройки не нужно: используется
+# встроенный GITHUB_TOKEN (packages: write). Образы появятся в разделе
+# Packages репозитория. Сделайте их public: Package settings → Change visibility.
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: Docker image
 
 on:
   push:
-    branches: [main]
+    branches: [main, master]
     tags: ["v*"]
   pull_request:
-    branches: [main]
-
-permissions:
-  contents: read
-  packages: write
+    branches: [main, master]
+  workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
-  # ghcr.io/<owner>/<repo> — lowercase required by the registry
-  IMAGE_NAME: ${{ github.repository }}
+  IMAGE_PREFIX: ghcr.io/${{ github.repository }}
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: write
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v3
 
-      - name: Log in to GHCR
+      - name: Login to GHCR
         if: github.event_name != 'pull_request'
         uses: docker/login-action@v3
         with:
@@ -36,25 +49,29 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract Docker metadata
+      - name: Metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.IMAGE_PREFIX }}
           tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
-            type=sha,prefix=sha-
-            type=ref,event=tag
+            type=ref,event=branch
+            type=ref,event=pr
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix=sha-
+            type=raw,value=latest,enable={{is_default_branch}}
 
-      - name: Build and push
+      - name: Build & push
         uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile
+          # Single arch: Deno Alpine + SQLite is enough for self-host; multi-arch
+          # needs QEMU and roughly doubles CI time.
+          platforms: linux/amd64
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=oxygen-blog
+          cache-to: type=gha,mode=max,scope=oxygen-blog
