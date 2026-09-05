@@ -24,8 +24,19 @@ import {
 // 5 attempts per 5 minutes per client key.
 const limiter = new SlidingWindowRateLimiter(5, 5 * 60 * 1000);
 
+/**
+ * Best-effort client IP for the rate limiter.
+ * Nginx (docs/nginx.conf.example) sets X-Forwarded-For to
+ * `$proxy_add_x_forwarded_for`, which APPENDS the real peer address after
+ * whatever the client already sent — so the trustworthy value is the
+ * LAST entry, not the first (the first is fully attacker-controlled and
+ * lets a client spoof a fresh rate-limit bucket on every request).
+ */
 function clientKey(headers: Headers): string {
-  return headers.get("x-forwarded-for") ?? "unknown";
+  const forwarded = headers.get("x-forwarded-for");
+  if (!forwarded) return "unknown";
+  const hops = forwarded.split(",").map((ip) => ip.trim()).filter(Boolean);
+  return hops.at(-1) ?? "unknown";
 }
 
 function redirectWithSession(location: string, token: string): Response {

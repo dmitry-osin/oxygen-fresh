@@ -11,7 +11,7 @@ import {
 import { listTagsWithCounts } from "@/lib/tags.ts";
 import { getNavLinks } from "@/lib/menu.ts";
 import { getSettings } from "@/lib/settings.ts";
-import { getAuthorsMap, getAuthor } from "@/lib/users.ts";
+import { getAuthor, getAuthorsMap } from "@/lib/users.ts";
 import { ADMIN_USERNAME } from "@/lib/auth.ts";
 import { canonicalUrl } from "@/lib/seo.ts";
 import { formatDateLong, parseCalendarMonth } from "@/utils/date.ts";
@@ -29,8 +29,8 @@ import {
 export const handler = define.handlers(async (ctx) => {
   const day = ctx.params.date;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) throw new HttpError(404);
-  const [settings, posts, allPosts, tags, navLinks, siteAuthor] =
-    await Promise.all([
+  const [settings, posts, allPosts, tags, navLinks, siteAuthor] = await Promise
+    .all([
       getSettings(),
       listPostsOnDay(day),
       listPublishedPosts(),

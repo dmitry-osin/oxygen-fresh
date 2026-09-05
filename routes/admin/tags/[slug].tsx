@@ -36,7 +36,18 @@ export const handler = define.handlers({
     if (!tag) throw new HttpError(404);
     const form = await ctx.req.formData();
     if (String(form.get("action")) === "delete") {
-      await deleteTag(slug);
+      try {
+        await deleteTag(slug);
+      } catch (error) {
+        console.error(`Failed to delete tag "${slug}":`, error);
+        return {
+          data: {
+            tag,
+            posts: await listPostsByTag(slug),
+            error: "Could not delete this tag — please try again.",
+          },
+        };
+      }
       return ctx.redirect("/admin/tags");
     }
     const result = await updateTag(slug, {

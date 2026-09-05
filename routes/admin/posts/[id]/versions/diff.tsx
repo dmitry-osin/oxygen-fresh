@@ -7,7 +7,7 @@ import { HttpError } from "fresh";
 import { define } from "@/utils.ts";
 import { getPostById } from "@/lib/posts.ts";
 import { getVersion } from "@/lib/versions.ts";
-import { diffLines, type DiffRow } from "@/lib/diff.ts";
+import { diffLines, type DiffRow, MAX_DIFF_LINES } from "@/lib/diff.ts";
 import { formatDateTime } from "@/utils/date.ts";
 import type { PostSnapshot } from "@/types/index.ts";
 import {
@@ -20,7 +20,7 @@ interface DiffData {
   postId: string;
   left: PostSnapshot;
   right: PostSnapshot;
-  rows: DiffRow[];
+  rows: DiffRow[] | null;
 }
 
 function cellClass(kind: DiffRow["kind"], side: "left" | "right"): string {
@@ -47,12 +47,13 @@ export const handler = define.handlers({
       getVersion(postId, rightId),
     ]);
     if (!left || !right) throw new HttpError(404);
+    const diff = diffLines(left.content, right.content);
     return {
       data: {
         postId,
         left,
         right,
-        rows: diffLines(left.content, right.content),
+        rows: diff.ok ? diff.rows : null,
       },
     };
   },
@@ -84,16 +85,28 @@ export default define.page<typeof handler>(function VersionDiff({ data }) {
       </div>
       <table class="w-full table-fixed border-collapse">
         <tbody>
-          {rows.map((row, index) => (
-            <tr key={index}>
-              <td class={cellClass(row.kind, "left")}>
-                {row.left ?? ""}
-              </td>
-              <td class={cellClass(row.kind, "right")}>
-                {row.right ?? ""}
-              </td>
-            </tr>
-          ))}
+          {rows === null
+            ? (
+              <tr>
+                <td colSpan={2} class={`${ADMIN_TYPE_BODY} py-4`}>
+                  This version pair is too large to diff in the browser (over
+                  {" "}
+                  {MAX_DIFF_LINES}{" "}
+                  lines on one side). Restore one version to a draft and compare
+                  the content manually instead.
+                </td>
+              </tr>
+            )
+            : rows.map((row, index) => (
+              <tr key={index}>
+                <td class={cellClass(row.kind, "left")}>
+                  {row.left ?? ""}
+                </td>
+                <td class={cellClass(row.kind, "right")}>
+                  {row.right ?? ""}
+                </td>
+              </tr>
+            ))}
         </tbody>
       </table>
     </div>

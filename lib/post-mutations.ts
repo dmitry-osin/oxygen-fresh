@@ -39,30 +39,57 @@ function syncTagIndex(
   }
 }
 
-/** Atomically write the post and its secondary indexes. */
-async function commitPost(post: Post, previous?: Post): Promise<void> {
-  const op = kv.atomic();
-  if (
-    previous?.status === "published" &&
-    (post.status !== "published" || previous.slug !== post.slug)
-  ) {
-    op.delete(KvKeys.publishedPost(previous.slug));
+const COMMIT_RETRIES = 3;
+
+/**
+ * Atomically write the post and its secondary indexes.
+ * Publishing claims the public slug slot with an optimistic check: two
+ * concurrent publishes racing to the same slug can no longer both
+ * "succeed" (one silently overwriting the other's public slot) — the
+ * loser gets a proper conflict error and the caller can retry.
+ */
+async function commitPost(post: Post, previous?: Post): Promise<SaveResult> {
+  const claimKey = post.status === "published"
+    ? KvKeys.publishedPost(post.slug)
+    : null;
+  for (let attempt = 0; attempt < COMMIT_RETRIES; attempt++) {
+    const op = kv.atomic();
+    if (claimKey) {
+      const current = await kv.get<Post>(claimKey);
+      if (current.value && current.value.id !== post.id) {
+        return { ok: false, error: "Slug is already in use." };
+      }
+      op.check(current);
+    }
+    if (
+      previous?.status === "published" &&
+      (post.status !== "published" || previous.slug !== post.slug)
+    ) {
+      op.delete(KvKeys.publishedPost(previous.slug));
+    }
+    if (post.status === "published") {
+      // Always clear draft slot so a leftover draft cannot shadow published.
+      op.delete(KvKeys.draftPost(post.id));
+    }
+    op.set(postKey(post), post);
+    queuePostSummary(op, post);
+    syncTagIndex(op, post, previous);
+    const res = await op.commit();
+    if (res.ok) {
+      invalidatePostSummaryCache();
+      return { ok: true, post };
+    }
+    // Another writer claimed the same slug between our read and commit —
+    // retry a few times before surfacing a conflict.
   }
-  if (post.status === "published") {
-    // Always clear draft slot so a leftover draft cannot shadow published.
-    op.delete(KvKeys.draftPost(post.id));
-  }
-  op.set(postKey(post), post);
-  queuePostSummary(op, post);
-  syncTagIndex(op, post, previous);
-  await op.commit();
-  invalidatePostSummaryCache();
+  return { ok: false, error: "Slug is already in use." };
 }
 
 /** Insert a brand-new post object and register its id. */
-export async function insertPost(post: Post): Promise<void> {
-  await commitPost(post);
-  await addToList(KvKeys.postIds(), post.id);
+export async function insertPost(post: Post): Promise<SaveResult> {
+  const result = await commitPost(post);
+  if (result.ok) await addToList(KvKeys.postIds(), post.id);
+  return result;
 }
 
 /** Create a draft post; the slug is auto-generated and made unique. */
@@ -87,8 +114,7 @@ export async function createPost(
     publishedAt: null,
     authorId,
   };
-  await insertPost(post);
-  return { ok: true, post };
+  return await insertPost(post);
 }
 
 function nextStatus(post: Post, input: PostInput): Post["status"] {
@@ -141,12 +167,13 @@ export async function updatePost(
     return { ok: false, error: "Slug is already in use." };
   }
   const updated = applyInput(post, input);
-  await commitPost(updated, post);
+  const result = await commitPost(updated, post);
+  if (!result.ok) return result;
   if (updated.status === "published") {
     await indexPost(updated);
     await syncPostShortLink(updated.id, updated.slug);
   }
-  return { ok: true, post: updated };
+  return result;
 }
 
 /**
@@ -170,10 +197,11 @@ export async function publishPost(
     publishedAt: publishedAt ?? now,
     updatedAt: now,
   };
-  await commitPost(published, post);
+  const result = await commitPost(published, post);
+  if (!result.ok) return result;
   await createSnapshot(published);
   await indexPost(published);
-  return { ok: true, post: published };
+  return result;
 }
 
 /** Unpublish: move back to drafts; the post disappears from the public site. */
@@ -181,10 +209,11 @@ export async function unpublishPost(id: string): Promise<SaveResult> {
   const post = await getPostById(id);
   if (!post) return { ok: false, error: "Post not found." };
   const draft: Post = { ...post, status: "draft", updatedAt: nowIso() };
-  await commitPost(draft, post);
+  const result = await commitPost(draft, post);
+  if (!result.ok) return result;
   await unindexPost(draft.id);
   await deletePostShortLink(draft.id);
-  return { ok: true, post: draft };
+  return result;
 }
 
 /** Delete the post, its indexes, search entries and version history. */

@@ -127,9 +127,7 @@ export async function listAllPostSummaries(): Promise<PostSummary[]> {
 export async function listPublishedPostSummaries(): Promise<PostSummary[]> {
   return (await listAllPostSummaries())
     .filter((post) => post.status === "published")
-    .sort((a, b) =>
-      (b.publishedAt ?? "").localeCompare(a.publishedAt ?? "")
-    );
+    .sort((a, b) => (b.publishedAt ?? "").localeCompare(a.publishedAt ?? ""));
 }
 
 export async function getPostSummary(id: string): Promise<PostSummary | null> {
@@ -187,13 +185,29 @@ export async function getPublishedBySlug(slug: string): Promise<Post | null> {
   return (await kv.get<Post>(KvKeys.publishedPost(slug))).value;
 }
 
-export async function getPostById(id: string): Promise<Post | null> {
-  // Prefer the published copy when both keys somehow exist (stale draft).
+/** Full scan fallback — only used when the summary index is missing/stale. */
+async function getPostByIdSlow(id: string): Promise<Post | null> {
   const iter = kv.list<Post>({ prefix: PUBLISHED_PREFIX });
   for await (const entry of iter) {
     if (entry.value.id === id) return entry.value;
   }
   return (await kv.get<Post>(KvKeys.draftPost(id))).value;
+}
+
+/**
+ * Point lookup via the summary index (postSummary is written atomically
+ * with every post write, see commitPost), so its slug/status are never
+ * stale. Falls back to a full scan only if the summary is missing —
+ * previously this always scanned every published post's full Markdown
+ * body just to resolve one id.
+ */
+export async function getPostById(id: string): Promise<Post | null> {
+  const summary = await getPostSummary(id);
+  if (!summary) return await getPostByIdSlow(id);
+  const post = summary.status === "published"
+    ? await getPublishedBySlug(summary.slug)
+    : (await kv.get<Post>(KvKeys.draftPost(id))).value;
+  return post ?? await getPostByIdSlow(id);
 }
 
 /** True when another post already uses the slug. */

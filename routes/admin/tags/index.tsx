@@ -40,7 +40,17 @@ export const handler = define.handlers({
       String(form.get("slug") ?? "");
 
     if (action === "delete" && slug) {
-      await deleteTag(slug);
+      try {
+        await deleteTag(slug);
+      } catch (error) {
+        console.error(`Failed to delete tag "${slug}":`, error);
+        return {
+          data: {
+            tags: await listTags(),
+            error: "Could not delete this tag — please try again.",
+          },
+        };
+      }
       return ctx.redirect("/admin/tags");
     }
 

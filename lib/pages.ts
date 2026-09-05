@@ -132,7 +132,17 @@ export async function getPageBySlug(slug: string): Promise<Page | null> {
   return (await kv.get<Page>(KvKeys.page(slug))).value;
 }
 
+/**
+ * Point lookup via the summary index (pageSummary is written atomically
+ * with every page write). Falls back to a full scan only if the summary
+ * is missing — previously every call scanned all pages' full bodies.
+ */
 export async function getPageById(id: string): Promise<Page | null> {
+  const summary = await getPageSummary(id);
+  if (summary) {
+    const page = await getPageBySlug(summary.slug);
+    if (page) return page;
+  }
   const iter = kv.list<Page>({ prefix: PAGES_PREFIX });
   for await (const entry of iter) {
     if (entry.value.id === id) return entry.value;
@@ -158,27 +168,44 @@ async function uniquePageSlug(base: string): Promise<string> {
   }
 }
 
+const SLUG_CLAIM_RETRIES = 5;
+
 /** Create a page; the slug is auto-generated and made unique. */
 export async function createPage(input: PageInput): Promise<PageResult> {
   const title = input.title.trim();
   if (!title) return { ok: false, error: "Title is required." };
+  const base = input.slug?.trim() || slugify(title);
   const now = nowIso();
-  const page: Page = {
-    id: crypto.randomUUID(),
-    slug: await uniquePageSlug(input.slug?.trim() || slugify(title)),
-    title,
-    content: input.content ?? "",
-    template: input.template ?? "default",
-    showInMenu: input.showInMenu ?? false,
-    menuOrder: input.menuOrder ?? 0,
-    createdAt: now,
-    updatedAt: now,
-  };
-  await queuePageSummary(kv.atomic().set(KvKeys.page(page.slug), page), page)
-    .commit();
-  await addToList(KvKeys.pageIds(), page.id);
-  invalidatePageSummaryCache();
-  return { ok: true, page };
+  for (let attempt = 0; attempt < SLUG_CLAIM_RETRIES; attempt++) {
+    const slug = await uniquePageSlug(base);
+    const page: Page = {
+      id: crypto.randomUUID(),
+      slug,
+      title,
+      content: input.content ?? "",
+      template: input.template ?? "default",
+      showInMenu: input.showInMenu ?? false,
+      menuOrder: input.menuOrder ?? 0,
+      createdAt: now,
+      updatedAt: now,
+    };
+    // Re-check right before the atomic write and make the write itself
+    // conditional on that read: two requests racing on the same
+    // auto-generated slug can no longer both "succeed" (one silently
+    // overwriting the other's page).
+    const current = await kv.get<Page>(KvKeys.page(slug));
+    if (current.value) continue;
+    const op = queuePageSummary(
+      kv.atomic().check(current).set(KvKeys.page(slug), page),
+      page,
+    );
+    const res = await op.commit();
+    if (!res.ok) continue;
+    await addToList(KvKeys.pageIds(), page.id);
+    invalidatePageSummaryCache();
+    return { ok: true, page };
+  }
+  return { ok: false, error: "Could not allocate a unique slug — retry." };
 }
 
 /** Update page fields. Slug uniqueness is enforced here (before write). */
@@ -191,7 +218,8 @@ export async function updatePage(
   if (!input.title.trim()) return { ok: false, error: "Title is required." };
   const slug = input.slug?.trim() || page.slug;
   if (!isValidSlug(slug)) return { ok: false, error: "Invalid slug." };
-  if (await isPageSlugTaken(slug, id)) {
+  const current = await kv.get<Page>(KvKeys.page(slug));
+  if (current.value && current.value.id !== id) {
     return { ok: false, error: "Slug is already in use." };
   }
   const updated: Page = {
@@ -206,12 +234,16 @@ export async function updatePage(
     metaDescription: input.metaDescription?.trim() || undefined,
     updatedAt: nowIso(),
   };
+  // The check ties the write to the exact row we just read above, so a
+  // concurrent create/update claiming the same slug in between loses the
+  // commit instead of being silently overwritten.
   const op = queuePageSummary(
-    kv.atomic().set(KvKeys.page(slug), updated),
+    kv.atomic().check(current).set(KvKeys.page(slug), updated),
     updated,
   );
   if (slug !== page.slug) op.delete(KvKeys.page(page.slug));
-  await op.commit();
+  const res = await op.commit();
+  if (!res.ok) return { ok: false, error: "Slug is already in use." };
   invalidatePageSummaryCache();
   return { ok: true, page: updated };
 }

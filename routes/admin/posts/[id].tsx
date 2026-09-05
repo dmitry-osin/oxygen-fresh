@@ -364,9 +364,7 @@ export default define.page<typeof handler>(function PostEditor({ data }) {
             message="This post was never saved. Discard it and leave?"
             stayLabel="Keep editing"
             leaveLabel="Discard"
-            discardActionUrl={`/admin/posts?id=${
-              encodeURIComponent(post.id)
-            }`}
+            discardActionUrl={`/admin/posts?id=${encodeURIComponent(post.id)}`}
           />
         </form>
       )}

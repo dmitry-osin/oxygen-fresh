@@ -39,6 +39,12 @@ import {
 export const handler = define.handlers(async (ctx) => {
   const post = await getPublishedBySlug(ctx.params.slug);
   if (!post) throw new HttpError(404);
+  // Fire-and-forget: counting a view must never add its own KV
+  // round-trip (a CAS retry loop, see lib/analytics.ts) to this
+  // response's TTFB, especially under concurrent traffic to one post.
+  trackView("post", post.id).catch((error) =>
+    console.error("trackView failed:", error)
+  );
   const [settings, navLinks, recent, tags, related, author] = await Promise
     .all([
       getSettings(),
@@ -47,7 +53,6 @@ export const handler = define.handlers(async (ctx) => {
       listTagsWithCounts(),
       relatedPosts(post, 3),
       getAuthor(post.authorId),
-      trackView("post", post.id),
     ]);
   return {
     data: {

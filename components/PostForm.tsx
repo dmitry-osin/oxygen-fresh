@@ -7,7 +7,10 @@ import SlugField from "@/islands/SlugField.tsx";
 import MarkdownEditor from "@/islands/MarkdownEditor.tsx";
 import TagInput from "@/islands/TagInput.tsx";
 import UnsavedChangesGuard from "@/islands/UnsavedChangesGuard.tsx";
-import { PostShortLinkPanel, SHORT_LINK_FORM_ID } from "@/components/PostShortLinkPanel.tsx";
+import {
+  PostShortLinkPanel,
+  SHORT_LINK_FORM_ID,
+} from "@/components/PostShortLinkPanel.tsx";
 import { ConfirmDeleteTrigger } from "@/components/ConfirmDeleteTrigger.tsx";
 import {
   ADMIN_BTN_PRIMARY,

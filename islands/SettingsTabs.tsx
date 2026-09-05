@@ -9,8 +9,7 @@ export interface SettingsTab {
   label: string;
 }
 
-const TAB =
-  "px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors";
+const TAB = "px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors";
 const TAB_IDLE =
   "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100";
 const TAB_ACTIVE =

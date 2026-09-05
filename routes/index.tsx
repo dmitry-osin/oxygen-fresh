@@ -3,11 +3,11 @@
 
 import { Head } from "fresh/runtime";
 import { define } from "@/utils.ts";
-import { listPublishedPosts, collectPostDays } from "@/lib/posts.ts";
+import { collectPostDays, listPublishedPosts } from "@/lib/posts.ts";
 import { listTagsWithCounts } from "@/lib/tags.ts";
 import { getNavLinks } from "@/lib/menu.ts";
 import { getSettings } from "@/lib/settings.ts";
-import { getAuthorsMap, getAuthor } from "@/lib/users.ts";
+import { getAuthor, getAuthorsMap } from "@/lib/users.ts";
 import { ADMIN_USERNAME } from "@/lib/auth.ts";
 import { canonicalUrl } from "@/lib/seo.ts";
 import { parseCalendarMonth } from "@/utils/date.ts";

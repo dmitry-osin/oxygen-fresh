@@ -4,7 +4,7 @@
 
 import { kv, KvKeys } from "./kv.ts";
 import type { Post, PostSnapshot } from "@/types/index.ts";
-import { insertPost, updatePost } from "./post-mutations.ts";
+import { insertPost, publishPost, updatePost } from "./post-mutations.ts";
 import { getPostById, type SaveResult, uniqueSlug } from "./posts.ts";
 import { nowIso } from "@/utils/date.ts";
 
@@ -29,6 +29,14 @@ export async function getVersion(
 /**
  * Apply a snapshot onto the existing post (title/body/intro/tags).
  * Keeps id, slug, status and template. Source: History restore.
+ *
+ * When the post is currently published, restoring goes live immediately
+ * (same as the confirm dialog says). To make sure that never silently
+ * discards content, the pre-restore live version is snapshotted first —
+ * effectively a no-op re-publish of what's already there — before the
+ * historical content overwrites it. Without this, a published post that
+ * had been edited (but not re-published) since its last snapshot would
+ * lose that edit with no trace in History.
  */
 export async function restoreVersionToPost(
   postId: string,
@@ -40,6 +48,10 @@ export async function restoreVersionToPost(
   ]);
   if (!snapshot || !post) {
     return { ok: false, error: "Version or post not found." };
+  }
+  if (post.status === "published") {
+    const preserved = await publishPost(postId);
+    if (!preserved.ok) return preserved;
   }
   return await updatePost(postId, {
     title: snapshot.title,

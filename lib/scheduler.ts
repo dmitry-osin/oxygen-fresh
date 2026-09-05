@@ -16,10 +16,20 @@ export async function publishDueScheduledPosts(): Promise<number> {
     post.publishedAt !== null &&
     post.publishedAt <= nowIso()
   );
+  let published = 0;
   for (const post of due) {
-    await publishPost(post.id, post.publishedAt ?? undefined);
+    const result = await publishPost(post.id, post.publishedAt ?? undefined);
+    if (result.ok) {
+      published++;
+    } else {
+      // Left as "scheduled": the next hourly tick retries. Logged so a
+      // stuck post (e.g. a slug conflict) doesn't fail silently forever.
+      console.error(
+        `scheduler: failed to publish post ${post.id}: ${result.error}`,
+      );
+    }
   }
-  return due.length;
+  return published;
 }
 
 /**

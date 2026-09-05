@@ -57,7 +57,8 @@ function validatePost(item: unknown): Post | null {
     "authorId",
   ]) &&
     POST_STATUSES.has(String(item.status)) &&
-    (item.template === undefined || POST_TEMPLATES.has(String(item.template))) &&
+    (item.template === undefined ||
+      POST_TEMPLATES.has(String(item.template))) &&
     isStringArray(item.tags) &&
     (item.publishedAt === null ||
       item.publishedAt === undefined ||
@@ -75,7 +76,8 @@ function validatePage(item: unknown): Page | null {
     "createdAt",
     "updatedAt",
   ]) &&
-    (item.template === undefined || PAGE_TEMPLATES.has(String(item.template))) &&
+    (item.template === undefined ||
+      PAGE_TEMPLATES.has(String(item.template))) &&
     typeof item.showInMenu === "boolean" &&
     typeof item.menuOrder === "number";
   return ok ? item as unknown as Page : null;

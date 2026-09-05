@@ -11,7 +11,11 @@ import {
   getMenuItems,
   reorderMenuItems,
 } from "@/lib/menu.ts";
-import { getPageBySlug, listPagePickers, type PagePickerItem } from "@/lib/pages.ts";
+import {
+  getPageBySlug,
+  listPagePickers,
+  type PagePickerItem,
+} from "@/lib/pages.ts";
 import {
   getPublishedBySlug,
   listPublishedPostPickers,

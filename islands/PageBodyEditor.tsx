@@ -38,8 +38,8 @@ export default function PageBodyEditor(props: {
           class={inputCls}
           value={template.value}
           onChange={(e) => {
-            template.value =
-              (e.currentTarget.value as Page["template"]) || "default";
+            template.value = (e.currentTarget.value as Page["template"]) ||
+              "default";
           }}
         >
           {TEMPLATES.map((opt) => (
@@ -79,8 +79,9 @@ export default function PageBodyEditor(props: {
             </textarea>
             <p class={`${ADMIN_TYPE_MUTED} mt-2`}>
               Paste a full HTML document or a fragment (we wrap fragments).
-              Include {"<style>"} and {"<script>"} in the same field — they are
-              part of the page. Only admins can edit this.
+              Include {"<style>"} and {"<script>"}{" "}
+              in the same field — they are part of the page. Only admins can
+              edit this.
             </p>
           </div>
         )

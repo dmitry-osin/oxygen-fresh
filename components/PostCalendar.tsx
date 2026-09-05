@@ -70,10 +70,9 @@ export function PostCalendar(
           if (day === null) {
             return <span key={`e-${index}`} class="h-8" />;
           }
-          const key =
-            `${month.year}-${String(month.month).padStart(2, "0")}-${
-              String(day).padStart(2, "0")
-            }`;
+          const key = `${month.year}-${String(month.month).padStart(2, "0")}-${
+            String(day).padStart(2, "0")
+          }`;
           const hasPosts = withPosts.has(key);
           const selected = selectedDay === key;
           const base =
@@ -84,9 +83,7 @@ export function PostCalendar(
                 key={key}
                 href={`/day/${key}`}
                 class={`${base} font-semibold text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 ${
-                  selected
-                    ? "ring-1 ring-gray-900 dark:ring-gray-100"
-                    : ""
+                  selected ? "ring-1 ring-gray-900 dark:ring-gray-100" : ""
                 }`}
                 title={`${day}: posts`}
               >

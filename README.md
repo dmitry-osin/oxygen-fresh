@@ -63,15 +63,11 @@ seed; health check on `GET /`. CI builds the image and pushes to GHCR on `main`
 [docs/deployment.md](docs/deployment.md)
 
 ```sh
-docker build -t oxygen-blog .
-docker run -d --name oxygen-blog -p 8000:8000 \
-  -v /srv/oxygen-blog/data:/app/data \
-  -v /srv/oxygen-blog/static/uploads:/app/static/uploads \
-  -e ADMIN_PASSWORD_HASH='$2a$10$...' \
-  -e SESSION_SECRET='…' \
-  -e SITE_URL='https://blog.example.com' \
-  oxygen-blog
+cp .env.example .env
+docker compose up -d
 ```
+
+Or `docker run` (see [docs/deployment.md](docs/deployment.md)):
 
 ## Project layout
 

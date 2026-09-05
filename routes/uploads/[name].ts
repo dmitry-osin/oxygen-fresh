@@ -4,7 +4,7 @@
 // route always reads from disk (same SAFE_NAME checks as lib/media.ts).
 
 import { define } from "@/utils.ts";
-import { readMediaFile } from "@/lib/media.ts";
+import { RAW_UPLOAD_HEADER, readMediaFile } from "@/lib/media.ts";
 
 export const handler = define.handlers({
   async GET(ctx) {
@@ -14,6 +14,7 @@ export const handler = define.handlers({
       headers: {
         "content-type": file.mime,
         "cache-control": "public, max-age=3600",
+        [RAW_UPLOAD_HEADER]: "1",
       },
     });
   },

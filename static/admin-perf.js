@@ -7,10 +7,9 @@
     return;
   }
 
-  const withWrite = new URLSearchParams(location.search).get("writeProbe") === "1";
-  const url = withWrite
-    ? "/admin/api/perf-kv?write=1"
-    : "/admin/api/perf-kv";
+  const withWrite =
+    new URLSearchParams(location.search).get("writeProbe") === "1";
+  const url = withWrite ? "/admin/api/perf-kv?write=1" : "/admin/api/perf-kv";
 
   function fmt(ms) {
     return ms.toFixed(1) + " ms";

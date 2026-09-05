@@ -55,8 +55,22 @@ function walkDiff(a: string[], b: string[], table: number[][]): DiffRow[] {
 }
 
 /** Side-by-side line diff of two texts. */
-export function diffLines(left: string, right: string): DiffRow[] {
+export type DiffResult =
+  | { ok: true; rows: DiffRow[] }
+  | { ok: false; reason: "too-large" };
+
+// Deno runs JS on a single thread: the LCS table is O(n*m) time AND
+// memory, computed synchronously with no yield point, so it blocks every
+// other request (including the public site, if it shares the process)
+// until it finishes. A pasted/imported document with thousands of lines
+// published twice would otherwise be able to hang the whole server.
+export const MAX_DIFF_LINES = 5000;
+
+export function diffLines(left: string, right: string): DiffResult {
   const a = left.split("\n");
   const b = right.split("\n");
-  return walkDiff(a, b, lcsTable(a, b));
+  if (a.length > MAX_DIFF_LINES || b.length > MAX_DIFF_LINES) {
+    return { ok: false, reason: "too-large" };
+  }
+  return { ok: true, rows: walkDiff(a, b, lcsTable(a, b)) };
 }

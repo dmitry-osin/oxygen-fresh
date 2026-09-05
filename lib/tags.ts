@@ -4,11 +4,9 @@
 import { addToList, kv, KvKeys, removeFromList } from "./kv.ts";
 import type { Post, Tag } from "@/types/index.ts";
 import {
-  DRAFT_PREFIX,
   getPostById,
   invalidatePostSummaryCache,
   listPublishedPosts,
-  PUBLISHED_PREFIX,
   toPostSummary,
 } from "./posts.ts";
 import { slugify } from "@/utils/slugify.ts";
@@ -79,14 +77,19 @@ export async function createTag(
   if (!name) return { ok: false, error: "Name is required." };
   const slug = input.slug?.trim() || slugify(name);
   if (!isValidSlug(slug)) return { ok: false, error: "Invalid slug." };
-  if (await getTag(slug)) return { ok: false, error: "Tag already exists." };
+  const current = await kv.get<Tag>(KvKeys.tag(slug));
+  if (current.value) return { ok: false, error: "Tag already exists." };
   const tag: Tag = {
     slug,
     name,
     description: input.description?.trim() || undefined,
     createdAt: nowIso(),
   };
-  await kv.set(KvKeys.tag(slug), tag);
+  // Tie the write to the exact (empty) row read above: two concurrent
+  // creates for the same slug can no longer both report success.
+  const res = await kv.atomic().check(current).set(KvKeys.tag(slug), tag)
+    .commit();
+  if (!res.ok) return { ok: false, error: "Tag already exists." };
   await addToList(KvKeys.tagIds(), slug);
   return { ok: true, tag };
 }
@@ -110,47 +113,59 @@ export async function updateTag(
 
 /** Posts carrying the tag, published only, newest first. */
 export async function listPostsByTag(tagSlug: string): Promise<Post[]> {
-  const posts: Post[] = [];
+  const ids: string[] = [];
   const iter = kv.list<string>({ prefix: ["posts_by_tag", tagSlug] });
-  for await (const entry of iter) {
-    const post = await getPostById(entry.value);
-    if (post?.status === "published") posts.push(post);
-  }
-  return posts.sort((a, b) =>
-    (b.publishedAt ?? "").localeCompare(a.publishedAt ?? "")
-  );
+  for await (const entry of iter) ids.push(entry.value);
+  const posts = await Promise.all(ids.map((id) => getPostById(id)));
+  return posts
+    .filter((post): post is Post => post?.status === "published")
+    .sort((a, b) => (b.publishedAt ?? "").localeCompare(a.publishedAt ?? ""));
 }
 
+// Deno KV caps an atomic() transaction at 1000 mutations. Each affected
+// post costs 3 (post row + summary + posts_by_tag delete), so batches
+// stay well under that ceiling regardless of how many posts share a tag.
+const DELETE_TAG_CHUNK = 200;
+
 /**
- * Delete the tag and remove it from every post (published + drafts)
- * in one atomic batch. Source: F3.
+ * Delete the tag and remove it from every post (published + drafts),
+ * batched so a popular tag (hundreds of posts) can't blow the atomic
+ * mutation limit. Each post is re-read right before its batch commits,
+ * keeping the lost-update window to the batch itself instead of however
+ * long it takes to enumerate every post in the blog.
+ * Source: F3.
  */
 export async function deleteTag(slug: string): Promise<boolean> {
   const tag = await getTag(slug);
   if (!tag) return false;
 
-  const affected: { post: Post; key: Deno.KvKey }[] = [];
-  for (const prefix of [PUBLISHED_PREFIX, DRAFT_PREFIX]) {
-    const iter = kv.list<Post>({ prefix });
-    for await (const entry of iter) {
-      if (entry.value.tags.includes(slug)) {
-        affected.push({ post: entry.value, key: entry.key });
-      }
-    }
-  }
+  const postIds: string[] = [];
+  const iter = kv.list<string>({ prefix: ["posts_by_tag", slug] });
+  for await (const entry of iter) postIds.push(entry.value);
 
-  const op = kv.atomic().delete(KvKeys.tag(slug));
-  for (const { post, key } of affected) {
-    const updated = {
-      ...post,
-      tags: post.tags.filter((t) => t !== slug),
-      updatedAt: nowIso(),
-    };
-    op.set(key, updated);
-    op.set(KvKeys.postSummary(post.id), toPostSummary(updated));
-    op.delete(KvKeys.postsByTag(slug, post.id));
+  await kv.atomic().delete(KvKeys.tag(slug)).commit();
+  for (let i = 0; i < postIds.length; i += DELETE_TAG_CHUNK) {
+    const chunk = postIds.slice(i, i + DELETE_TAG_CHUNK);
+    const posts = await Promise.all(chunk.map((id) => getPostById(id)));
+    const op = kv.atomic();
+    for (const post of posts) {
+      if (!post || !post.tags.includes(slug)) continue;
+      const updated = {
+        ...post,
+        tags: post.tags.filter((t) => t !== slug),
+        updatedAt: nowIso(),
+      };
+      op.set(
+        updated.status === "published"
+          ? KvKeys.publishedPost(updated.slug)
+          : KvKeys.draftPost(updated.id),
+        updated,
+      );
+      op.set(KvKeys.postSummary(updated.id), toPostSummary(updated));
+      op.delete(KvKeys.postsByTag(slug, updated.id));
+    }
+    await op.commit();
   }
-  await op.commit();
   invalidatePostSummaryCache();
   await removeFromList(KvKeys.tagIds(), slug);
   return true;

@@ -1,12 +1,6 @@
 // Admin quick actions on the public site (only when logged in).
 
-import {
-  ExternalLink,
-  File,
-  FileText,
-  Pencil,
-  Settings,
-} from "lucide-preact";
+import { ExternalLink, File, FileText, Pencil, Settings } from "lucide-preact";
 import { PUBLIC_SHELL } from "@/lib/public-ui.ts";
 
 const LINK =

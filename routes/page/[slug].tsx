@@ -32,9 +32,12 @@ import { parseCalendarMonth } from "@/utils/date.ts";
 export const handler = define.handlers(async (ctx) => {
   const page = await getPageBySlug(ctx.params.slug);
   if (!page) throw new HttpError(404);
+  // Fire-and-forget: see routes/[slug].tsx for why this isn't awaited.
+  trackView("page", page.id).catch((error) =>
+    console.error("trackView failed:", error)
+  );
 
   if (page.template === "blank") {
-    await trackView("page", page.id);
     return new Response(renderBlankPageHtml(page), {
       headers: {
         "content-type": "text/html; charset=utf-8",
@@ -49,7 +52,6 @@ export const handler = define.handlers(async (ctx) => {
     getNavLinks(),
     listPublishedPosts(),
     listTagsWithCounts(),
-    trackView("page", page.id),
   ]);
   return {
     data: {

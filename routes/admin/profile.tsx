@@ -62,7 +62,7 @@ async function resolveAvatar(
 }
 
 export const handler = define.handlers({
-  async GET(ctx) {
+  GET(ctx) {
     const user = ctx.state.user!;
     return {
       data: {

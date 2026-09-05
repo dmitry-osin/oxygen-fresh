@@ -1,11 +1,7 @@
 // Sidebar for the "default" template (F7): configurable widgets
 // (author, calendar, recent, tags) plus automatic TOC on posts.
 
-import type {
-  AuthorProfile,
-  Post,
-  SidebarBlockConfig,
-} from "@/types/index.ts";
+import type { AuthorProfile, Post, SidebarBlockConfig } from "@/types/index.ts";
 import type { TocEntry } from "@/lib/markdown.ts";
 import type { TagWithCount } from "@/lib/tags.ts";
 import type { CalendarMonth } from "@/utils/date.ts";

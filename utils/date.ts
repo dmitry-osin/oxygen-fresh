@@ -36,12 +36,11 @@ export function parseCalendarMonth(
   calParam: string | null,
   fallbackDay?: string,
 ): CalendarMonth {
-  const candidate = (calParam && /^\d{4}-\d{2}$/.test(calParam)
-    ? calParam
-    : null) ??
-    (fallbackDay && /^\d{4}-\d{2}-\d{2}$/.test(fallbackDay)
-      ? fallbackDay.slice(0, 7)
-      : null);
+  const candidate =
+    (calParam && /^\d{4}-\d{2}$/.test(calParam) ? calParam : null) ??
+      (fallbackDay && /^\d{4}-\d{2}-\d{2}$/.test(fallbackDay)
+        ? fallbackDay.slice(0, 7)
+        : null);
   if (candidate) {
     const year = Number(candidate.slice(0, 4));
     const month = Number(candidate.slice(5, 7));

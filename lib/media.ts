@@ -33,6 +33,20 @@ export interface MediaFile {
   adminUrl: string;
 }
 
+/**
+ * Marker so main.ts can replace the app-wide CSP for raw upload bytes.
+ * The global CSP keeps a literal 'unsafe-inline' fallback for script-src
+ * (browsers without nonce support), which — with no nonce attached to a
+ * plain `new Response(...)` — would let an SVG upload's inline <script>
+ * execute if someone navigates straight to /uploads/<file>.svg. This
+ * response-specific CSP blocks all script execution unconditionally
+ * regardless of file content, mirroring the BLANK_PAGE_CSP pattern in
+ * lib/blank-page.ts.
+ */
+export const RAW_UPLOAD_HEADER = "X-Oxygen-Raw-Upload";
+export const RAW_UPLOAD_CSP =
+  "default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:";
+
 export type SaveMediaResult =
   | { ok: true; file: MediaFile }
   | { ok: false; error: string };

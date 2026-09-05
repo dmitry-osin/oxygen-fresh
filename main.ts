@@ -2,6 +2,7 @@ import { App, csp, staticFiles } from "fresh";
 import { type State } from "./utils.ts";
 import { bootstrap } from "./lib/bootstrap.ts";
 import { BLANK_PAGE_CSP } from "./lib/blank-page.ts";
+import { RAW_UPLOAD_CSP, RAW_UPLOAD_HEADER } from "./lib/media.ts";
 import { startScheduler } from "./lib/scheduler.ts";
 
 export const app = new App<State>();
@@ -14,11 +15,18 @@ app.use(staticFiles());
 // for style-src after the CSP middleware runs (registered first so it
 // patches the header on the way out).
 // Blank HTML pages set X-Oxygen-Blank-Page and need their own CSP so
-// inline <style>/<script> in admin-authored HTML can run.
+// inline <style>/<script> in admin-authored HTML can run. Raw upload
+// bytes (routes/uploads/[name].ts, routes/admin/api/media/file.ts) set
+// X-Oxygen-Raw-Upload and get a script-blocking CSP instead — see
+// lib/media.ts for why.
 app.use(async (ctx) => {
   const res = await ctx.next();
   if (res.headers.get("X-Oxygen-Blank-Page") === "1") {
     res.headers.set("Content-Security-Policy", BLANK_PAGE_CSP);
+    return res;
+  }
+  if (res.headers.get(RAW_UPLOAD_HEADER) === "1") {
+    res.headers.set("Content-Security-Policy", RAW_UPLOAD_CSP);
     return res;
   }
   const header = res.headers.get("Content-Security-Policy");

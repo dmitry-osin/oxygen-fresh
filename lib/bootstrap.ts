@@ -19,7 +19,12 @@ function envBool(name: string, fallback: boolean): boolean {
   return raw === "1" || raw === "true" || raw === "yes" || raw === "on";
 }
 
-function envInt(name: string, fallback: number, min: number, max: number): number {
+function envInt(
+  name: string,
+  fallback: number,
+  min: number,
+  max: number,
+): number {
   const raw = env(name);
   if (raw === undefined) return fallback;
   const n = Number(raw);
@@ -51,13 +56,19 @@ export function settingsFromEnv(): Settings {
   return {
     ...DEFAULT_SETTINGS,
     siteName: env("SITE_NAME") ?? DEFAULT_SETTINGS.siteName,
-    siteDescription: env("SITE_DESCRIPTION") ?? DEFAULT_SETTINGS.siteDescription,
+    siteDescription: env("SITE_DESCRIPTION") ??
+      DEFAULT_SETTINGS.siteDescription,
     footerDescription: env("FOOTER_DESCRIPTION") ??
       DEFAULT_SETTINGS.footerDescription,
     defaultMetaTitle: env("DEFAULT_META_TITLE"),
     defaultMetaDescription: env("DEFAULT_META_DESCRIPTION"),
     theme,
-    postsPerPage: envInt("POSTS_PER_PAGE", DEFAULT_SETTINGS.postsPerPage, 1, 100),
+    postsPerPage: envInt(
+      "POSTS_PER_PAGE",
+      DEFAULT_SETTINGS.postsPerPage,
+      1,
+      100,
+    ),
     giscusEnabled: envBool("GISCUS_ENABLED", DEFAULT_SETTINGS.giscusEnabled),
     giscusRepo: env("GISCUS_REPO"),
     giscusRepoId: env("GISCUS_REPO_ID"),

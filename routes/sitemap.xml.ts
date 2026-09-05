@@ -12,7 +12,13 @@ function urlEntry(loc: string, lastmod?: string): string {
   return `  <url>\n    <loc>${escapeXml(loc)}</loc>${lastmodTag}\n  </url>`;
 }
 
-export const handler = define.handlers(async () => {
+// Bots hit this unauthenticated endpoint often; cache like menu/settings
+// so a busy blog doesn't rebuild the full post+page listing per crawl.
+const CACHE_TTL_MS = 60_000;
+let cached: { at: number; xml: string } | null = null;
+
+async function buildSitemap(): Promise<string> {
+  if (cached && Date.now() - cached.at < CACHE_TTL_MS) return cached.xml;
   const [posts, pages] = await Promise.all([
     listPublishedPosts(),
     listPages(),
@@ -33,8 +39,12 @@ export const handler = define.handlers(async () => {
 ${entries}
 </urlset>
 `;
+  cached = { at: Date.now(), xml };
+  return xml;
+}
 
-  return new Response(xml, {
+export const handler = define.handlers(async () => {
+  return new Response(await buildSitemap(), {
     headers: { "content-type": "application/xml; charset=utf-8" },
   });
 });

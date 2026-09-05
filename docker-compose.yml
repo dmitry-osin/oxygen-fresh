@@ -1,0 +1,26 @@
+# Self-hosted oxygen-blog from GHCR.
+# Copy .env.example → .env, fill required vars, then:
+#   docker compose up -d
+#
+# First boot with empty volumes seeds admin + settings from env.
+
+services:
+  blog:
+    image: ${OXYGEN_IMAGE:-ghcr.io/dmitry-osin/oxygen-fresh:sha-725264e}
+    container_name: oxygen-blog
+    restart: unless-stopped
+    ports:
+      - "${HOST_PORT:-8000}:8000"
+    env_file:
+      - .env
+    environment:
+      PORT: "8000"
+      KV_PATH: ./data/kv.sqlite3
+      UPLOAD_DIR: ./static/uploads
+    volumes:
+      - blog-data:/app/data
+      - blog-uploads:/app/static/uploads
+
+volumes:
+  blog-data:
+  blog-uploads:

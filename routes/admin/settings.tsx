@@ -444,9 +444,9 @@ export default define.page<typeof handler>(function SettingsPage({ data }) {
           hidden={tab !== "sidebar"}
         >
           <p class={ADMIN_TYPE_MUTED}>
-            Configure widgets separately for the blog home, a single post, and
-            a static page. Drag to reorder; uncheck to hide. The table of
-            contents on posts is always shown when the post has headings.
+            Configure widgets separately for the blog home, a single post, and a
+            static page. Drag to reorder; uncheck to hide. The table of contents
+            on posts is always shown when the post has headings.
           </p>
           <section class="space-y-3">
             <h2 class="text-sm font-semibold">Blog home</h2>

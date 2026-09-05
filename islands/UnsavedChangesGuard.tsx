@@ -134,14 +134,14 @@ export default function UnsavedChangesGuard(
       }
     }
 
-    window.addEventListener("beforeunload", onBeforeUnload);
+    globalThis.addEventListener("beforeunload", onBeforeUnload);
     document.addEventListener("click", onClick, true);
     document.addEventListener("keydown", onKeyDown);
     form.addEventListener("submit", onSubmit);
 
     return () => {
       clearTimeout(readyTimer);
-      window.removeEventListener("beforeunload", onBeforeUnload);
+      globalThis.removeEventListener("beforeunload", onBeforeUnload);
       document.removeEventListener("click", onClick, true);
       document.removeEventListener("keydown", onKeyDown);
       form.removeEventListener("submit", onSubmit);
