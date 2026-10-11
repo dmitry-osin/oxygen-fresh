@@ -34,7 +34,7 @@ docker compose up -d
 Or build locally:
 
 ```sh
-docker build -t oxygen-blog .
+docker build -f Dockerfile.vps -t oxygen-blog .
 docker run -d --name oxygen-blog \
   -p 8000:8000 \
   -v /srv/oxygen-blog/data:/app/data \

@@ -66,7 +66,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ./Dockerfile
+          file: ./Dockerfile.vps
           # Single arch: Deno Alpine + SQLite is enough for self-host; multi-arch
           # needs QEMU and roughly doubles CI time.
           platforms: linux/amd64

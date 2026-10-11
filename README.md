@@ -83,3 +83,7 @@ data/        kv.sqlite3; a Docker volume
 docs/        deployment, backups, nginx example
 ai/          agent-facing plan and requirements (not part of the app)
 ```
+
+## Railway
+
+See [Railway / Railpack deployment](docs/railway.md). The shared stack is configured in the parent myserver-stack repository.

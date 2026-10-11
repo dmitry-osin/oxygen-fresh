@@ -1,0 +1,11 @@
+{
+  "$schema": "https://schema.railpack.com",
+  "provider": "deno",
+  "packages": { "deno": "2.9.6" },
+  "steps": {
+    "build": {
+      "commands": ["deno install --frozen", "deno task build"]
+    }
+  },
+  "deploy": { "startCommand": "sh railway/start.sh" }
+}
