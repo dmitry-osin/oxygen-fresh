@@ -21,6 +21,10 @@ deno task dev         # http://localhost:5173
 
 **Required in `.env`:** `ADMIN_PASSWORD_HASH`, `SESSION_SECRET`, `SITE_URL`.
 
+`SESSION_SECRET` signs session cookies with HMAC-SHA256 and must contain at
+least 32 characters (`openssl rand -hex 32`). Changing it requires users to sign
+in again. Upgrading from unsigned session cookies also requires a new sign-in.
+
 On startup with an empty KV the app seeds the admin user and site settings from
 env (`lib/bootstrap.ts`). Optional first-run vars (`SITE_NAME`, `THEME`,
 `ADMIN_FIRST_NAME`, Giscus, contact form, …) are documented in `.env.example`.
@@ -86,4 +90,5 @@ ai/          agent-facing plan and requirements (not part of the app)
 
 ## Railway
 
-See [Railway / Railpack deployment](docs/railway.md). The shared stack is configured in the parent myserver-stack repository.
+See [Railway / Railpack deployment](docs/railway.md). The shared stack is
+configured in the parent myserver-stack repository.

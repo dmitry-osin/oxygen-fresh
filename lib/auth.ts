@@ -5,10 +5,17 @@ import bcrypt from "bcryptjs";
 import { kv, KvKeys } from "./kv.ts";
 import type { Session, User } from "@/types/index.ts";
 import { nowIso } from "@/utils/date.ts";
+import { SESSION_TTL_MS } from "./session-cookie.ts";
+
+export {
+  clearSessionCookie,
+  readSessionToken,
+  SESSION_COOKIE,
+  SESSION_TTL_MS,
+  setSessionCookie,
+} from "./session-cookie.ts";
 
 export const ADMIN_USERNAME = "admin";
-export const SESSION_COOKIE = "session";
-export const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 export function hashPassword(password: string): string {
   return bcrypt.hashSync(password, 10);
@@ -78,43 +85,4 @@ export async function getSessionUser(token: string): Promise<User | null> {
 
 export async function deleteSession(token: string): Promise<void> {
   await kv.delete(KvKeys.session(token));
-}
-
-// Minimal cookie helpers (no external dependency).
-
-function isSecureSite(): boolean {
-  return (Deno.env.get("SITE_URL") ?? "").startsWith("https://");
-}
-
-/** Read the session token from a Cookie header. */
-export function readSessionToken(headers: Headers): string | undefined {
-  const header = headers.get("cookie");
-  if (!header) return undefined;
-  for (const part of header.split(";")) {
-    const eq = part.indexOf("=");
-    if (eq === -1) continue;
-    if (part.slice(0, eq).trim() === SESSION_COOKIE) {
-      return decodeURIComponent(part.slice(eq + 1).trim());
-    }
-  }
-  return undefined;
-}
-
-/** Attach the session cookie: httpOnly, Secure on HTTPS, SameSite=Strict. */
-export function setSessionCookie(headers: Headers, token: string): void {
-  const secure = isSecureSite() ? "; Secure" : "";
-  headers.append(
-    "Set-Cookie",
-    `${SESSION_COOKIE}=${token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${
-      SESSION_TTL_MS / 1000
-    }${secure}`,
-  );
-}
-
-/** Expire the session cookie immediately. */
-export function clearSessionCookie(headers: Headers): void {
-  headers.append(
-    "Set-Cookie",
-    `${SESSION_COOKIE}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0`,
-  );
 }

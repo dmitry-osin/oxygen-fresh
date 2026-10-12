@@ -58,6 +58,11 @@ deno eval 'import bcrypt from "npm:bcryptjs"; console.log(bcrypt.hashSync("your-
 
 Generate a session secret: `openssl rand -hex 32`.
 
+`SESSION_SECRET` signs session cookies with HMAC-SHA256; values shorter than 32
+characters are rejected when signing or verifying a cookie. Changing the secret
+or upgrading from unsigned cookies requires users to sign in again. Sessions and
+their expiration still live in KV.
+
 On first boot with an empty data volume, the container seeds the admin user and
 site settings from env (`lib/bootstrap.ts`). Changing seed vars later does
 **not** overwrite values already saved in Admin → Settings / Profile. Full
